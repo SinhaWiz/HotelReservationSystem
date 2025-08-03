@@ -18,7 +18,7 @@ public class UserDAO {
      */
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-        String query = "SELECT * FROM User";
+        String query = "SELECT * FROM users";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -27,12 +27,15 @@ public class UserDAO {
             while (rs.next()) {
                 User user = new User();
                 user.setUserId(rs.getInt("user_id"));
-                user.setName(rs.getString("name"));
+                user.setUsername(rs.getString("username"));
+                user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setPhoneNumber(rs.getString("phone_number"));
+                user.setFullName(rs.getString("full_name"));
                 user.setUserType(User.UserType.fromString(rs.getString("user_type")));
+                user.setPhone(rs.getString("phone"));
                 user.setAddress(rs.getString("address"));
-                user.setDateOfRegistration(rs.getDate("date_of_registration"));
+                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setUpdatedAt(rs.getTimestamp("updated_at"));
                 users.add(user);
             }
         } catch (SQLException e) {
@@ -48,7 +51,7 @@ public class UserDAO {
      * @return User object if found, null otherwise
      */
     public User getUserById(int userId) {
-        String query = "SELECT * FROM User WHERE user_id = ?";
+        String query = "SELECT * FROM users WHERE user_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -59,12 +62,15 @@ public class UserDAO {
                 if (rs.next()) {
                     User user = new User();
                     user.setUserId(rs.getInt("user_id"));
-                    user.setName(rs.getString("name"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPassword(rs.getString("password"));
                     user.setEmail(rs.getString("email"));
-                    user.setPhoneNumber(rs.getString("phone_number"));
+                    user.setFullName(rs.getString("full_name"));
                     user.setUserType(User.UserType.fromString(rs.getString("user_type")));
+                    user.setPhone(rs.getString("phone"));
                     user.setAddress(rs.getString("address"));
-                    user.setDateOfRegistration(rs.getDate("date_of_registration"));
+                    user.setCreatedAt(rs.getTimestamp("created_at"));
+                    user.setUpdatedAt(rs.getTimestamp("updated_at"));
                     return user;
                 }
             }
@@ -76,23 +82,60 @@ public class UserDAO {
     }
     
     /**
+     * Get a user by username
+     * @param username The username to search for
+     * @return User object if found, null otherwise
+     */
+    public User getUserByUsername(String username) {
+        String query = "SELECT * FROM users WHERE username = ?";
+        
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setString(1, username);
+            
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setUserId(rs.getInt("user_id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPassword(rs.getString("password"));
+                    user.setEmail(rs.getString("email"));
+                    user.setFullName(rs.getString("full_name"));
+                    user.setUserType(User.UserType.fromString(rs.getString("user_type")));
+                    user.setPhone(rs.getString("phone"));
+                    user.setAddress(rs.getString("address"));
+                    user.setCreatedAt(rs.getTimestamp("created_at"));
+                    user.setUpdatedAt(rs.getTimestamp("updated_at"));
+                    return user;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error getting user by username: " + e.getMessage());
+        }
+        
+        return null;
+    }
+    
+    /**
      * Add a new user to the database
      * @param user The User object to add
      * @return true if successful, false otherwise
      */
     public boolean addUser(User user) {
-        String query = "INSERT INTO User (name, email, phone_number, user_type, address, date_of_registration) " +
-                       "VALUES (?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO users (username, password, email, full_name, user_type, phone, address) " +
+                       "VALUES (?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement pstmt = conn.prepareStatement(query, new String[]{"user_id"})) {
             
-            pstmt.setString(1, user.getName());
-            pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getPhoneNumber());
-            pstmt.setString(4, user.getUserType().getValue());
-            pstmt.setString(5, user.getAddress());
-            pstmt.setDate(6, new java.sql.Date(user.getDateOfRegistration().getTime()));
+            pstmt.setString(1, user.getUsername());
+            pstmt.setString(2, user.getPassword());
+            pstmt.setString(3, user.getEmail());
+            pstmt.setString(4, user.getFullName());
+            pstmt.setString(5, user.getUserType().getValue());
+            pstmt.setString(6, user.getPhone());
+            pstmt.setString(7, user.getAddress());
             
             int affectedRows = pstmt.executeUpdate();
             
@@ -117,18 +160,20 @@ public class UserDAO {
      * @return true if successful, false otherwise
      */
     public boolean updateUser(User user) {
-        String query = "UPDATE User SET name = ?, email = ?, phone_number = ?, " +
-                       "user_type = ?, address = ? WHERE user_id = ?";
+        String query = "UPDATE users SET username = ?, password = ?, email = ?, full_name = ?, " +
+                       "user_type = ?, phone = ?, address = ? WHERE user_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
-            pstmt.setString(1, user.getName());
-            pstmt.setString(2, user.getEmail());
-            pstmt.setString(3, user.getPhoneNumber());
-            pstmt.setString(4, user.getUserType().getValue());
-            pstmt.setString(5, user.getAddress());
-            pstmt.setInt(6, user.getUserId());
+            pstmt.setString(1, user.getUsername());
+            pstmt.setString(2, user.getPassword());
+            pstmt.setString(3, user.getEmail());
+            pstmt.setString(4, user.getFullName());
+            pstmt.setString(5, user.getUserType().getValue());
+            pstmt.setString(6, user.getPhone());
+            pstmt.setString(7, user.getAddress());
+            pstmt.setInt(8, user.getUserId());
             
             int affectedRows = pstmt.executeUpdate();
             return affectedRows > 0;
@@ -145,7 +190,7 @@ public class UserDAO {
      * @return true if successful, false otherwise
      */
     public boolean deleteUser(int userId) {
-        String query = "DELETE FROM User WHERE user_id = ?";
+        String query = "DELETE FROM users WHERE user_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -162,12 +207,12 @@ public class UserDAO {
     }
     
     /**
-     * Get all hosts from the database
-     * @return List of User objects with user_type = 'host'
+     * Get all owners from the database
+     * @return List of User objects with type OWNER
      */
-    public List<User> getAllHosts() {
-        List<User> hosts = new ArrayList<>();
-        String query = "SELECT * FROM User WHERE user_type = 'host'";
+    public List<User> getAllOwners() {
+        List<User> owners = new ArrayList<>();
+        String query = "SELECT * FROM users WHERE user_type = 'OWNER'";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -176,28 +221,31 @@ public class UserDAO {
             while (rs.next()) {
                 User user = new User();
                 user.setUserId(rs.getInt("user_id"));
-                user.setName(rs.getString("name"));
+                user.setUsername(rs.getString("username"));
+                user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setPhoneNumber(rs.getString("phone_number"));
-                user.setUserType(User.UserType.HOST);
+                user.setFullName(rs.getString("full_name"));
+                user.setUserType(User.UserType.fromString(rs.getString("user_type")));
+                user.setPhone(rs.getString("phone"));
                 user.setAddress(rs.getString("address"));
-                user.setDateOfRegistration(rs.getDate("date_of_registration"));
-                hosts.add(user);
+                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setUpdatedAt(rs.getTimestamp("updated_at"));
+                owners.add(user);
             }
         } catch (SQLException e) {
-            System.err.println("Error getting all hosts: " + e.getMessage());
+            System.err.println("Error getting all owners: " + e.getMessage());
         }
         
-        return hosts;
+        return owners;
     }
     
     /**
-     * Get all renters from the database
-     * @return List of User objects with user_type = 'renter'
+     * Get all customers from the database
+     * @return List of User objects with type CUSTOMER
      */
-    public List<User> getAllRenters() {
-        List<User> renters = new ArrayList<>();
-        String query = "SELECT * FROM User WHERE user_type = 'renter'";
+    public List<User> getAllCustomers() {
+        List<User> customers = new ArrayList<>();
+        String query = "SELECT * FROM users WHERE user_type = 'CUSTOMER'";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -206,18 +254,21 @@ public class UserDAO {
             while (rs.next()) {
                 User user = new User();
                 user.setUserId(rs.getInt("user_id"));
-                user.setName(rs.getString("name"));
+                user.setUsername(rs.getString("username"));
+                user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setPhoneNumber(rs.getString("phone_number"));
-                user.setUserType(User.UserType.RENTER);
+                user.setFullName(rs.getString("full_name"));
+                user.setUserType(User.UserType.fromString(rs.getString("user_type")));
+                user.setPhone(rs.getString("phone"));
                 user.setAddress(rs.getString("address"));
-                user.setDateOfRegistration(rs.getDate("date_of_registration"));
-                renters.add(user);
+                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setUpdatedAt(rs.getTimestamp("updated_at"));
+                customers.add(user);
             }
         } catch (SQLException e) {
-            System.err.println("Error getting all renters: " + e.getMessage());
+            System.err.println("Error getting all customers: " + e.getMessage());
         }
         
-        return renters;
+        return customers;
     }
 } 
