@@ -11,10 +11,6 @@ import java.awt.*;
 public class MainFrame extends JFrame {
     
     private JTabbedPane tabbedPane;
-    
-    /**
-     * Constructor for the MainFrame
-     */
     public MainFrame() {
         initComponents();
     }

@@ -8,9 +8,10 @@ import java.sql.SQLException;
  * Utility class for managing database connections
  */
 public class DatabaseConnection {
-    private static final String URL = "jdbc:mysql://localhost:3306/rentalplatform";
-    private static final String USER = "root";
-    private static final String PASSWORD = "sinhawiz123"; // Password from earlier in the conversation
+    // Oracle connection parameters
+    private static final String URL = "jdbc:oracle:thin:@localhost:1521:XE";
+    private static final String USER = "rentalplatform";
+    private static final String PASSWORD = "rentalplatform123";
     
     private static Connection connection = null;
     
@@ -22,21 +23,13 @@ public class DatabaseConnection {
     public static Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
-                // Try the older driver class name first
-                try {
-                    Class.forName("com.mysql.jdbc.Driver");
-                    System.out.println("Using legacy MySQL driver");
-                } catch (ClassNotFoundException e) {
-                    // If that fails, try the newer driver class name
-                    try {
-                        Class.forName("com.mysql.cj.jdbc.Driver");
-                        System.out.println("Using MySQL CJ driver");
-                    } catch (ClassNotFoundException e2) {
-                        throw new SQLException("MySQL JDBC Driver not found. Make sure the MySQL connector JAR is in the classpath.", e2);
-                    }
-                }
+                // Load Oracle JDBC driver
+                Class.forName("oracle.jdbc.driver.OracleDriver");
+                System.out.println("Oracle JDBC Driver loaded successfully!");
                 
                 connection = DriverManager.getConnection(URL, USER, PASSWORD);
+            } catch (ClassNotFoundException e) {
+                throw new SQLException("Oracle JDBC Driver not found. Make sure the Oracle JDBC driver JAR is in the classpath.", e);
             } catch (Exception e) {
                 throw new SQLException("Failed to establish database connection: " + e.getMessage(), e);
             }
