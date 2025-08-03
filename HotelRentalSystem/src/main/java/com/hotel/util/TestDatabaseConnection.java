@@ -1,43 +1,48 @@
 package com.hotel.util;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 
 /**
- * Simple program to test the database connection
+ * Utility class to test database connection
  */
 public class TestDatabaseConnection {
+    
     public static void main(String[] args) {
+        System.out.println("Testing Oracle Database Connection...");
+        
         try {
-            // Try to load the MySQL JDBC driver explicitly
+            // Try to load the Oracle JDBC driver explicitly
             try {
-                Class.forName("com.mysql.jdbc.Driver");
-                System.out.println("MySQL JDBC Driver loaded successfully!");
+                Class.forName("oracle.jdbc.driver.OracleDriver");
+                System.out.println("Oracle JDBC Driver loaded successfully!");
             } catch (ClassNotFoundException e) {
-                System.out.println("MySQL JDBC Driver not found!");
-                System.out.println("Error: " + e.getMessage());
-                
-                // Try the new driver class name
-                try {
-                    Class.forName("com.mysql.cj.jdbc.Driver");
-                    System.out.println("MySQL CJ JDBC Driver loaded successfully!");
-                } catch (ClassNotFoundException e2) {
-                    System.out.println("MySQL CJ JDBC Driver not found!");
-                    System.out.println("Error: " + e2.getMessage());
-                }
-                
+                System.out.println("Oracle JDBC Driver not found!");
+                e.printStackTrace();
                 return;
             }
             
-            // Try to get a database connection
-            Connection conn = DatabaseConnection.getConnection();
-            System.out.println("Database connection successful!");
+            // Test the connection
+            Connection connection = DatabaseConnection.getConnection();
+            if (connection != null && !connection.isClosed()) {
+                System.out.println("Database connection successful!");
+                
+                // Get database metadata
+                DatabaseMetaData metaData = connection.getMetaData();
+                System.out.println("Database: " + metaData.getDatabaseProductName());
+                System.out.println("Version: " + metaData.getDatabaseProductVersion());
+                System.out.println("Driver: " + metaData.getDriverName());
+                System.out.println("Driver Version: " + metaData.getDriverVersion());
+                
+                connection.close();
+                System.out.println("Connection closed successfully!");
+            } else {
+                System.out.println("Failed to establish database connection!");
+            }
             
-            // Close the connection
-            conn.close();
-            System.out.println("Database connection closed.");
         } catch (SQLException e) {
-            System.out.println("Error connecting to database: " + e.getMessage());
+            System.err.println("Database connection error: " + e.getMessage());
             e.printStackTrace();
         }
     }

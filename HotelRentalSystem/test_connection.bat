@@ -1,4 +1,4 @@
 @echo off
-echo Testing database connection...
-java -cp "lib/mysql-connector-j-8.0.33.jar;src/main/java" com.hotel.util.TestDatabaseConnection
+echo Testing Oracle database connection...
+java -cp "lib/ojdbc8-21.9.0.0.jar;src/main/java" com.hotel.util.TestDatabaseConnection
 pause 
