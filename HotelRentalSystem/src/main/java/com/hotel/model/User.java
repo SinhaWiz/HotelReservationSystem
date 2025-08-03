@@ -7,16 +7,20 @@ import java.util.Date;
  */
 public class User {
     private int userId;
-    private String name;
+    private String username;
+    private String password;
     private String email;
-    private String phoneNumber;
+    private String fullName;
     private UserType userType;
+    private String phone;
     private String address;
-    private Date dateOfRegistration;
+    private Date createdAt;
+    private Date updatedAt;
     
     public enum UserType {
-        HOST("host"),
-        RENTER("renter");
+        ADMIN("ADMIN"),
+        OWNER("OWNER"),
+        CUSTOMER("CUSTOMER");
         
         private final String value;
         
@@ -43,25 +47,30 @@ public class User {
     }
     
     // Parameterized constructor
-    public User(int userId, String name, String email, String phoneNumber, UserType userType, 
-                String address, Date dateOfRegistration) {
+    public User(int userId, String username, String password, String email, String fullName, 
+                UserType userType, String phone, String address, Date createdAt, Date updatedAt) {
         this.userId = userId;
-        this.name = name;
+        this.username = username;
+        this.password = password;
         this.email = email;
-        this.phoneNumber = phoneNumber;
+        this.fullName = fullName;
         this.userType = userType;
+        this.phone = phone;
         this.address = address;
-        this.dateOfRegistration = dateOfRegistration;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
     
     // Constructor without userId (for new user creation)
-    public User(String name, String email, String phoneNumber, UserType userType, String address, Date dateOfRegistration) {
-        this.name = name;
+    public User(String username, String password, String email, String fullName, 
+                UserType userType, String phone, String address) {
+        this.username = username;
+        this.password = password;
         this.email = email;
-        this.phoneNumber = phoneNumber;
+        this.fullName = fullName;
         this.userType = userType;
+        this.phone = phone;
         this.address = address;
-        this.dateOfRegistration = dateOfRegistration;
     }
     
     // Getters and Setters
@@ -73,12 +82,20 @@ public class User {
         this.userId = userId;
     }
     
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
     
-    public void setName(String name) {
-        this.name = name;
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    public String getPassword() {
+        return password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
     }
     
     public String getEmail() {
@@ -89,12 +106,12 @@ public class User {
         this.email = email;
     }
     
-    public String getPhoneNumber() {
-        return phoneNumber;
+    public String getFullName() {
+        return fullName;
     }
     
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
     }
     
     public UserType getUserType() {
@@ -105,6 +122,14 @@ public class User {
         this.userType = userType;
     }
     
+    public String getPhone() {
+        return phone;
+    }
+    
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+    
     public String getAddress() {
         return address;
     }
@@ -113,24 +138,34 @@ public class User {
         this.address = address;
     }
     
-    public Date getDateOfRegistration() {
-        return dateOfRegistration;
+    public Date getCreatedAt() {
+        return createdAt;
     }
     
-    public void setDateOfRegistration(Date dateOfRegistration) {
-        this.dateOfRegistration = dateOfRegistration;
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
+    }
+    
+    public Date getUpdatedAt() {
+        return updatedAt;
+    }
+    
+    public void setUpdatedAt(Date updatedAt) {
+        this.updatedAt = updatedAt;
     }
     
     @Override
     public String toString() {
         return "User{" +
                 "userId=" + userId +
-                ", name='" + name + '\'' +
+                ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
-                ", phoneNumber='" + phoneNumber + '\'' +
+                ", fullName='" + fullName + '\'' +
                 ", userType=" + userType +
+                ", phone='" + phone + '\'' +
                 ", address='" + address + '\'' +
-                ", dateOfRegistration=" + dateOfRegistration +
+                ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 } 
