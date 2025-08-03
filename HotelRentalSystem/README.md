@@ -1,116 +1,120 @@
 # Hotel Rental System
 
-A Java Swing application for managing hotel rentals, with MySQL database integration.
+A Java Swing application for managing hotel rentals, with Oracle database integration.
 
 ## Features
 
-- **Property Management**: Add, edit, delete, and view properties
-- **Booking Management**: Create, modify, and cancel bookings
-- **User Management**: Manage hosts and renters
-- **Reports**: Generate various reports including booking summaries, revenue by property, top-rated properties, etc.
-- **Data Export**: Export reports to CSV files
+- User management (Admin, Owner, Customer)
+- Property listing and management
+- Booking system
+- Payment processing
+- Review and rating system
+- Search and filter functionality
 
 ## Prerequisites
 
 - Java 11 or higher
-- MySQL 8.0 or higher
+- Oracle Database 19c or higher (or Oracle Express Edition)
+- Maven (for building the project)
 
-## Quick Setup
+## Database Setup
 
-1. **Set up the database**:
-   - Run the `setup_database.bat` script to create the database and tables
-   - Enter your MySQL root password when prompted
+### Oracle Database Requirements
+- Oracle Database 19c or higher
+- Oracle Express Edition (XE) is supported
+- A database user with appropriate permissions
 
-2. **Test the database connection**:
-   - Run the `test_connection.bat` script to verify that the application can connect to the database
+### Setup Instructions
 
-3. **Run the application**:
-   - Run the `run.bat` script to start the application
-
-## Manual Setup
-
-### Database Setup
-
-1. Install MySQL if you haven't already
-2. Create a database using the provided SQL script in `src/main/resources/database_setup.sql`
-3. You can run the script manually using the MySQL command line:
-   ```
-   mysql -u root -p < src/main/resources/database_setup.sql
+1. Install Oracle Database if you haven't already
+2. Create a database user for the application:
+   ```sql
+   CREATE USER rentalplatform IDENTIFIED BY rentalplatform123;
+   GRANT CONNECT, RESOURCE, CREATE VIEW, CREATE SEQUENCE TO rentalplatform;
+   GRANT UNLIMITED TABLESPACE TO rentalplatform;
    ```
 
-### Configuration
+3. Run the database setup script:
+   ```bash
+   setup_database.bat
+   ```
 
-The database connection settings are in `src/main/java/com/hotel/util/DatabaseConnection.java`:
+   You can also run the script manually using SQL*Plus:
+   ```bash
+   sqlplus rentalplatform/rentalplatform123@//localhost:1521/XE @src/main/resources/database_setup.sql
+   ```
+
+## Configuration
+
+### Database Connection
+The database connection is configured in `src/main/java/com/hotel/util/DatabaseConnection.java`:
 
 ```java
-private static final String URL = "jdbc:mysql://localhost:3306/rentalplatform";
-private static final String USER = "root";
-private static final String PASSWORD = "your_mysql_password"; // Update this with your password
+private static final String URL = "jdbc:oracle:thin:@localhost:1521:XE";
+private static final String USER = "rentalplatform";
+private static final String PASSWORD = "rentalplatform123";
 ```
 
-Update the `PASSWORD` field with your MySQL root password.
+Update the `USER` and `PASSWORD` fields with your Oracle database credentials.
 
-### Running the Application
+## Building and Running
 
-To run the application, use the provided batch file:
+### Using Maven
+```bash
+mvn clean package
+java -cp "target/HotelRentalSystem-1.0-SNAPSHOT-jar-with-dependencies.jar;lib/ojdbc8-21.9.0.0.jar" com.hotel.HotelRentalSystem
 ```
+
+### Using Batch Files
+```bash
 run.bat
 ```
 
-Or run it manually:
-```
-java -cp "target/HotelRentalSystem-1.0-SNAPSHOT-jar-with-dependencies.jar;lib/mysql-connector-j-8.0.33.jar" com.hotel.HotelRentalSystem
+### Testing Database Connection
+```bash
+test_connection.bat
 ```
 
 ## Troubleshooting
 
-### MySQL Driver Not Found
+### Oracle Driver Not Found
+If you encounter the "Oracle Driver not found" error:
 
-If you encounter the "MySQL Driver not found" error:
-
-1. Make sure the MySQL Connector JAR file is in the `lib` directory
-2. Verify that the JAR file is included in the classpath when running the application
-3. Try both driver class names:
-   - `com.mysql.jdbc.Driver` (older versions)
-   - `com.mysql.cj.jdbc.Driver` (newer versions)
-
-The application is configured to try both driver class names automatically.
+1. Make sure the Oracle JDBC driver JAR file is in the `lib` directory
+2. The driver class name should be: `oracle.jdbc.driver.OracleDriver`
+3. Check that the Oracle JDBC driver version is compatible with your Oracle database version
 
 ### Database Connection Issues
+1. Verify that Oracle is running
+2. Check that the database service is accessible on the configured port (default: 1521)
+3. Ensure the database user has proper permissions
+4. Verify the connection string format: `jdbc:oracle:thin:@hostname:port:service_name`
 
-If you have issues connecting to the database:
-
-1. Verify that MySQL is running
-2. Check that the database name, username, and password are correct in `DatabaseConnection.java`
-3. Ensure the database and tables exist by running the setup script
-4. Run the test connection script to diagnose the issue
+### Common Oracle Issues
+1. **ORA-12541: TNS:no listener**: Oracle listener is not running
+2. **ORA-01017: invalid username/password**: Check credentials
+3. **ORA-12514: TNS:listener does not currently know of service**: Check service name in connection string
 
 ## Project Structure
 
-- `src/main/java/com/hotel/model/` - Model classes representing database entities
-- `src/main/java/com/hotel/dao/` - Data Access Objects for database operations
-- `src/main/java/com/hotel/util/` - Utility classes
-- `src/main/java/com/hotel/view/` - UI components
-  - `src/main/java/com/hotel/view/panels/` - Panel components for different sections
-  - `src/main/java/com/hotel/view/dialogs/` - Dialog components for user interactions
-- `src/main/java/com/hotel/HotelRentalSystem.java` - Main application class
+```
+src/main/java/com/hotel/
+├── dao/           # Data Access Objects
+├── model/         # Entity classes
+├── util/          # Utility classes
+├── view/          # UI components
+└── HotelRentalSystem.java  # Main application class
+```
 
-## Login Credentials
+## Database Schema
 
-The database setup script creates the following sample users:
-
-- **Admin**: 
-  - Username: admin
-  - Password: admin123
-
-- **Property Owner**:
-  - Username: owner1
-  - Password: owner123
-
-- **Customer**:
-  - Username: customer1
-  - Password: customer123
+The application uses the following Oracle tables:
+- `users` - User accounts and profiles
+- `properties` - Property listings
+- `bookings` - Reservation records
+- `payments` - Payment transactions
+- `reviews` - User reviews and ratings
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is for educational purposes. 
