@@ -30,11 +30,11 @@ public class UserDAO {
                 user.setUsername(rs.getString("username"));
                 user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setFullName(rs.getString("full_name"));
+                user.setName(rs.getString("name"));
                 user.setUserType(User.UserType.fromString(rs.getString("user_type")));
-                user.setPhone(rs.getString("phone"));
+                user.setPhoneNumber(rs.getString("phone_number"));
                 user.setAddress(rs.getString("address"));
-                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setDateOfRegistration(rs.getTimestamp("date_of_registration"));
                 user.setUpdatedAt(rs.getTimestamp("updated_at"));
                 users.add(user);
             }
@@ -65,11 +65,11 @@ public class UserDAO {
                     user.setUsername(rs.getString("username"));
                     user.setPassword(rs.getString("password"));
                     user.setEmail(rs.getString("email"));
-                    user.setFullName(rs.getString("full_name"));
+                    user.setName(rs.getString("name"));
                     user.setUserType(User.UserType.fromString(rs.getString("user_type")));
-                    user.setPhone(rs.getString("phone"));
+                    user.setPhoneNumber(rs.getString("phone_number"));
                     user.setAddress(rs.getString("address"));
-                    user.setCreatedAt(rs.getTimestamp("created_at"));
+                    user.setDateOfRegistration(rs.getTimestamp("date_of_registration"));
                     user.setUpdatedAt(rs.getTimestamp("updated_at"));
                     return user;
                 }
@@ -101,11 +101,11 @@ public class UserDAO {
                     user.setUsername(rs.getString("username"));
                     user.setPassword(rs.getString("password"));
                     user.setEmail(rs.getString("email"));
-                    user.setFullName(rs.getString("full_name"));
+                    user.setName(rs.getString("name"));
                     user.setUserType(User.UserType.fromString(rs.getString("user_type")));
-                    user.setPhone(rs.getString("phone"));
+                    user.setPhoneNumber(rs.getString("phone_number"));
                     user.setAddress(rs.getString("address"));
-                    user.setCreatedAt(rs.getTimestamp("created_at"));
+                    user.setDateOfRegistration(rs.getTimestamp("date_of_registration"));
                     user.setUpdatedAt(rs.getTimestamp("updated_at"));
                     return user;
                 }
@@ -123,8 +123,8 @@ public class UserDAO {
      * @return true if successful, false otherwise
      */
     public boolean addUser(User user) {
-        String query = "INSERT INTO users (username, password, email, full_name, user_type, phone, address) " +
-                       "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO users (username, password, email, name, user_type, phone_number, address, date_of_registration) " +
+                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query, new String[]{"user_id"})) {
@@ -132,10 +132,11 @@ public class UserDAO {
             pstmt.setString(1, user.getUsername());
             pstmt.setString(2, user.getPassword());
             pstmt.setString(3, user.getEmail());
-            pstmt.setString(4, user.getFullName());
+            pstmt.setString(4, user.getName());
             pstmt.setString(5, user.getUserType().getValue());
-            pstmt.setString(6, user.getPhone());
+            pstmt.setString(6, user.getPhoneNumber());
             pstmt.setString(7, user.getAddress());
+            pstmt.setTimestamp(8, new Timestamp(user.getDateOfRegistration().getTime()));
             
             int affectedRows = pstmt.executeUpdate();
             
@@ -160,8 +161,8 @@ public class UserDAO {
      * @return true if successful, false otherwise
      */
     public boolean updateUser(User user) {
-        String query = "UPDATE users SET username = ?, password = ?, email = ?, full_name = ?, " +
-                       "user_type = ?, phone = ?, address = ? WHERE user_id = ?";
+        String query = "UPDATE users SET username = ?, password = ?, email = ?, name = ?, " +
+                       "user_type = ?, phone_number = ?, address = ? WHERE user_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -169,9 +170,9 @@ public class UserDAO {
             pstmt.setString(1, user.getUsername());
             pstmt.setString(2, user.getPassword());
             pstmt.setString(3, user.getEmail());
-            pstmt.setString(4, user.getFullName());
+            pstmt.setString(4, user.getName());
             pstmt.setString(5, user.getUserType().getValue());
-            pstmt.setString(6, user.getPhone());
+            pstmt.setString(6, user.getPhoneNumber());
             pstmt.setString(7, user.getAddress());
             pstmt.setInt(8, user.getUserId());
             
@@ -207,12 +208,12 @@ public class UserDAO {
     }
     
     /**
-     * Get all owners from the database
-     * @return List of User objects with type OWNER
+     * Get all hosts from the database
+     * @return List of User objects with type HOST
      */
-    public List<User> getAllOwners() {
-        List<User> owners = new ArrayList<>();
-        String query = "SELECT * FROM users WHERE user_type = 'OWNER'";
+    public List<User> getAllHosts() {
+        List<User> hosts = new ArrayList<>();
+        String query = "SELECT * FROM users WHERE user_type = 'host'";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -224,28 +225,28 @@ public class UserDAO {
                 user.setUsername(rs.getString("username"));
                 user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setFullName(rs.getString("full_name"));
+                user.setName(rs.getString("name"));
                 user.setUserType(User.UserType.fromString(rs.getString("user_type")));
-                user.setPhone(rs.getString("phone"));
+                user.setPhoneNumber(rs.getString("phone_number"));
                 user.setAddress(rs.getString("address"));
-                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setDateOfRegistration(rs.getTimestamp("date_of_registration"));
                 user.setUpdatedAt(rs.getTimestamp("updated_at"));
-                owners.add(user);
+                hosts.add(user);
             }
         } catch (SQLException e) {
-            System.err.println("Error getting all owners: " + e.getMessage());
+            System.err.println("Error getting all hosts: " + e.getMessage());
         }
         
-        return owners;
+        return hosts;
     }
     
     /**
-     * Get all customers from the database
-     * @return List of User objects with type CUSTOMER
+     * Get all renters from the database
+     * @return List of User objects with type RENTER
      */
-    public List<User> getAllCustomers() {
-        List<User> customers = new ArrayList<>();
-        String query = "SELECT * FROM users WHERE user_type = 'CUSTOMER'";
+    public List<User> getAllRenters() {
+        List<User> renters = new ArrayList<>();
+        String query = "SELECT * FROM users WHERE user_type = 'renter'";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -257,18 +258,18 @@ public class UserDAO {
                 user.setUsername(rs.getString("username"));
                 user.setPassword(rs.getString("password"));
                 user.setEmail(rs.getString("email"));
-                user.setFullName(rs.getString("full_name"));
+                user.setName(rs.getString("name"));
                 user.setUserType(User.UserType.fromString(rs.getString("user_type")));
-                user.setPhone(rs.getString("phone"));
+                user.setPhoneNumber(rs.getString("phone_number"));
                 user.setAddress(rs.getString("address"));
-                user.setCreatedAt(rs.getTimestamp("created_at"));
+                user.setDateOfRegistration(rs.getTimestamp("date_of_registration"));
                 user.setUpdatedAt(rs.getTimestamp("updated_at"));
-                customers.add(user);
+                renters.add(user);
             }
         } catch (SQLException e) {
-            System.err.println("Error getting all customers: " + e.getMessage());
+            System.err.println("Error getting all renters: " + e.getMessage());
         }
         
-        return customers;
+        return renters;
     }
 } 
