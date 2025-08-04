@@ -8,11 +8,11 @@ import java.util.Date;
  */
 public class Property {
     private int propertyId;
-    private int ownerId;
+    private int hostId; // Changed from ownerId to match panel usage
     private String title;
     private String description;
     private PropertyType propertyType;
-    private String address;
+    private String location; // Changed from address to match panel usage
     private String city;
     private String state;
     private String country;
@@ -21,15 +21,14 @@ public class Property {
     private int bathrooms;
     private int maxGuests;
     private String amenities;
-    private Status status;
+    private boolean availabilityStatus; // Changed from Status enum to boolean to match panel usage
     private Date createdAt;
     private Date updatedAt;
     
     public enum PropertyType {
-        HOTEL("HOTEL"),
-        APARTMENT("APARTMENT"),
-        VILLA("VILLA"),
-        RESORT("RESORT");
+        APARTMENT("apartment"),
+        HOUSE("house"),
+        VILLA("villa");
         
         private final String value;
         
@@ -81,16 +80,16 @@ public class Property {
     public Property() {
     }
     
-    public Property(int propertyId, int ownerId, String title, String description, PropertyType propertyType,
-                   String address, String city, String state, String country, BigDecimal pricePerNight,
-                   int bedrooms, int bathrooms, int maxGuests, String amenities, Status status,
+    public Property(int propertyId, int hostId, String title, String description, PropertyType propertyType,
+                   String location, String city, String state, String country, BigDecimal pricePerNight,
+                   int bedrooms, int bathrooms, int maxGuests, String amenities, boolean availabilityStatus,
                    Date createdAt, Date updatedAt) {
         this.propertyId = propertyId;
-        this.ownerId = ownerId;
+        this.hostId = hostId;
         this.title = title;
         this.description = description;
         this.propertyType = propertyType;
-        this.address = address;
+        this.location = location;
         this.city = city;
         this.state = state;
         this.country = country;
@@ -99,7 +98,7 @@ public class Property {
         this.bathrooms = bathrooms;
         this.maxGuests = maxGuests;
         this.amenities = amenities;
-        this.status = status;
+        this.availabilityStatus = availabilityStatus;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -113,12 +112,21 @@ public class Property {
         this.propertyId = propertyId;
     }
     
+    public int getHostId() {
+        return hostId;
+    }
+    
+    public void setHostId(int hostId) {
+        this.hostId = hostId;
+    }
+    
+    // Backward compatibility methods
     public int getOwnerId() {
-        return ownerId;
+        return hostId;
     }
     
     public void setOwnerId(int ownerId) {
-        this.ownerId = ownerId;
+        this.hostId = ownerId;
     }
     
     public String getTitle() {
@@ -145,12 +153,21 @@ public class Property {
         this.propertyType = propertyType;
     }
     
+    public String getLocation() {
+        return location;
+    }
+    
+    public void setLocation(String location) {
+        this.location = location;
+    }
+    
+    // Backward compatibility methods
     public String getAddress() {
-        return address;
+        return location;
     }
     
     public void setAddress(String address) {
-        this.address = address;
+        this.location = address;
     }
     
     public String getCity() {
@@ -217,12 +234,21 @@ public class Property {
         this.amenities = amenities;
     }
     
+    public boolean isAvailabilityStatus() {
+        return availabilityStatus;
+    }
+    
+    public void setAvailabilityStatus(boolean availabilityStatus) {
+        this.availabilityStatus = availabilityStatus;
+    }
+    
+    // Backward compatibility methods
     public Status getStatus() {
-        return status;
+        return availabilityStatus ? Status.AVAILABLE : Status.BOOKED;
     }
     
     public void setStatus(Status status) {
-        this.status = status;
+        this.availabilityStatus = status == Status.AVAILABLE;
     }
     
     public Date getCreatedAt() {
@@ -245,14 +271,14 @@ public class Property {
     public String toString() {
         return "Property{" +
                 "propertyId=" + propertyId +
-                ", ownerId=" + ownerId +
+                ", hostId=" + hostId +
                 ", title='" + title + '\'' +
                 ", propertyType=" + propertyType +
-                ", address='" + address + '\'' +
+                ", location='" + location + '\'' +
                 ", city='" + city + '\'' +
                 ", country='" + country + '\'' +
                 ", pricePerNight=" + pricePerNight +
-                ", status=" + status +
+                ", availabilityStatus=" + availabilityStatus +
                 ", maxGuests=" + maxGuests +
                 '}';
     }
