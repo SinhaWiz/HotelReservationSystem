@@ -13,6 +13,8 @@ import com.hotel.model.Review;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowSorter;
 import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
