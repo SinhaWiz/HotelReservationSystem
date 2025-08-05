@@ -87,6 +87,31 @@ CREATE TABLE reviews (
     CONSTRAINT fk_reviews_customer FOREIGN KEY (customer_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+
+-- DDL log table
+CREATE TABLE ddl_log (
+    event_type VARCHAR2(20),
+    object_type VARCHAR2(20),
+    object_name VARCHAR2(100),
+    event_timestamp TIMESTAMP,
+    triggered_by VARCHAR2(50)
+);
+
+-- Trigger to log DDL changes
+CREATE OR REPLACE TRIGGER trg_ddl_logger
+AFTER DDL ON SCHEMA
+BEGIN
+    INSERT INTO ddl_log(event_type, object_type, object_name, event_date, triggered_by)
+    VALUES (
+        ORA_SYSEVENT,
+        ORA_DICT_OBJ_TYPE,
+        ORA_DICT_OBJ_NAME,
+        CURRENT_TIMESTAMP,
+        SYS_CONTEXT('USERENV','SESSION_USER')
+    );
+END;
+/
+
 -- Create triggers for updated_at timestamps
 CREATE OR REPLACE TRIGGER users_update_trigger
     BEFORE UPDATE ON users
@@ -111,6 +136,7 @@ BEGIN
     :NEW.updated_at := CURRENT_TIMESTAMP;
 END;
 /
+
 
 -- Insert admin user
 INSERT INTO users (username, password, email, full_name, user_type, phone, address)
