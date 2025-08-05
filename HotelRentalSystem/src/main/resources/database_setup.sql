@@ -149,7 +149,7 @@ CREATE OR REPLACE TRIGGER trg_username_update_audit
     AFTER UPDATE ON users
     FOR EACH ROW
 BEGIN
-    INSERT INTO username_update_audit(old_username, new_username, updated_at) VALUES (:OLD.username, :NEW.username, CURRENT_TIMESTAMP);
+    INSERT INTO username_update_audit(user_id, old_username, new_username, updated_at) VALUES (:OLD.user_id, :OLD.username, :NEW.username, CURRENT_TIMESTAMP);
 END;
 /
 
