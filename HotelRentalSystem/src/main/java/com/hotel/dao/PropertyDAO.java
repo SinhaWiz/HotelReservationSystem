@@ -27,11 +27,11 @@ public class PropertyDAO {
             while (rs.next()) {
                 Property property = new Property();
                 property.setPropertyId(rs.getInt("property_id"));
-                property.setOwnerId(rs.getInt("owner_id"));
+                property.setHostId(rs.getInt("host_id"));
                 property.setTitle(rs.getString("title"));
                 property.setDescription(rs.getString("description"));
                 property.setPropertyType(Property.PropertyType.fromString(rs.getString("property_type")));
-                property.setAddress(rs.getString("address"));
+                property.setLocation(rs.getString("location"));
                 property.setCity(rs.getString("city"));
                 property.setState(rs.getString("state"));
                 property.setCountry(rs.getString("country"));
@@ -40,7 +40,7 @@ public class PropertyDAO {
                 property.setBathrooms(rs.getInt("bathrooms"));
                 property.setMaxGuests(rs.getInt("max_guests"));
                 property.setAmenities(rs.getString("amenities"));
-                property.setStatus(Property.Status.fromString(rs.getString("status")));
+                property.setAvailabilityStatus(rs.getBoolean("availability_status"));
                 property.setCreatedAt(rs.getTimestamp("created_at"));
                 property.setUpdatedAt(rs.getTimestamp("updated_at"));
                 properties.add(property);
@@ -69,11 +69,11 @@ public class PropertyDAO {
                 if (rs.next()) {
                     Property property = new Property();
                     property.setPropertyId(rs.getInt("property_id"));
-                    property.setOwnerId(rs.getInt("owner_id"));
+                    property.setHostId(rs.getInt("host_id"));
                     property.setTitle(rs.getString("title"));
                     property.setDescription(rs.getString("description"));
                     property.setPropertyType(Property.PropertyType.fromString(rs.getString("property_type")));
-                    property.setAddress(rs.getString("address"));
+                    property.setLocation(rs.getString("location"));
                     property.setCity(rs.getString("city"));
                     property.setState(rs.getString("state"));
                     property.setCountry(rs.getString("country"));
@@ -82,7 +82,7 @@ public class PropertyDAO {
                     property.setBathrooms(rs.getInt("bathrooms"));
                     property.setMaxGuests(rs.getInt("max_guests"));
                     property.setAmenities(rs.getString("amenities"));
-                    property.setStatus(Property.Status.fromString(rs.getString("status")));
+                    property.setAvailabilityStatus(rs.getBoolean("availability_status"));
                     property.setCreatedAt(rs.getTimestamp("created_at"));
                     property.setUpdatedAt(rs.getTimestamp("updated_at"));
                     return property;
@@ -96,28 +96,28 @@ public class PropertyDAO {
     }
     
     /**
-     * Get properties by owner ID
-     * @param ownerId The ID of the owner
-     * @return List of Property objects owned by the specified owner
+     * Get properties by host ID
+     * @param hostId The ID of the host
+     * @return List of Property objects owned by the specified host
      */
-    public List<Property> getPropertiesByOwnerId(int ownerId) {
+    public List<Property> getPropertiesByHostId(int hostId) {
         List<Property> properties = new ArrayList<>();
-        String query = "SELECT * FROM properties WHERE owner_id = ?";
+        String query = "SELECT * FROM properties WHERE host_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
-            pstmt.setInt(1, ownerId);
+            pstmt.setInt(1, hostId);
             
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Property property = new Property();
                     property.setPropertyId(rs.getInt("property_id"));
-                    property.setOwnerId(rs.getInt("owner_id"));
+                    property.setHostId(rs.getInt("host_id"));
                     property.setTitle(rs.getString("title"));
                     property.setDescription(rs.getString("description"));
                     property.setPropertyType(Property.PropertyType.fromString(rs.getString("property_type")));
-                    property.setAddress(rs.getString("address"));
+                    property.setLocation(rs.getString("location"));
                     property.setCity(rs.getString("city"));
                     property.setState(rs.getString("state"));
                     property.setCountry(rs.getString("country"));
@@ -126,7 +126,7 @@ public class PropertyDAO {
                     property.setBathrooms(rs.getInt("bathrooms"));
                     property.setMaxGuests(rs.getInt("max_guests"));
                     property.setAmenities(rs.getString("amenities"));
-                    property.setStatus(Property.Status.fromString(rs.getString("status")));
+                    property.setAvailabilityStatus(rs.getBoolean("availability_status"));
                     property.setCreatedAt(rs.getTimestamp("created_at"));
                     property.setUpdatedAt(rs.getTimestamp("updated_at"));
                     properties.add(property);
@@ -145,18 +145,18 @@ public class PropertyDAO {
      * @return true if successful, false otherwise
      */
     public boolean addProperty(Property property) {
-        String query = "INSERT INTO properties (owner_id, title, description, property_type, address, city, state, country, " +
-                       "price_per_night, bedrooms, bathrooms, max_guests, amenities, status) " +
+        String query = "INSERT INTO properties (host_id, title, description, property_type, location, city, state, country, " +
+                       "price_per_night, bedrooms, bathrooms, max_guests, amenities, availability_status) " +
                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query, new String[]{"property_id"})) {
             
-            pstmt.setInt(1, property.getOwnerId());
+            pstmt.setInt(1, property.getHostId());
             pstmt.setString(2, property.getTitle());
             pstmt.setString(3, property.getDescription());
             pstmt.setString(4, property.getPropertyType().getValue());
-            pstmt.setString(5, property.getAddress());
+            pstmt.setString(5, property.getLocation());
             pstmt.setString(6, property.getCity());
             pstmt.setString(7, property.getState());
             pstmt.setString(8, property.getCountry());
@@ -165,7 +165,7 @@ public class PropertyDAO {
             pstmt.setInt(11, property.getBathrooms());
             pstmt.setInt(12, property.getMaxGuests());
             pstmt.setString(13, property.getAmenities());
-            pstmt.setString(14, property.getStatus().getValue());
+            pstmt.setBoolean(14, property.isAvailabilityStatus());
             
             int affectedRows = pstmt.executeUpdate();
             
@@ -190,18 +190,18 @@ public class PropertyDAO {
      * @return true if successful, false otherwise
      */
     public boolean updateProperty(Property property) {
-        String query = "UPDATE properties SET owner_id = ?, title = ?, description = ?, property_type = ?, " +
-                       "address = ?, city = ?, state = ?, country = ?, price_per_night = ?, bedrooms = ?, " +
-                       "bathrooms = ?, max_guests = ?, amenities = ?, status = ? WHERE property_id = ?";
+        String query = "UPDATE properties SET host_id = ?, title = ?, description = ?, property_type = ?, " +
+                       "location = ?, city = ?, state = ?, country = ?, price_per_night = ?, bedrooms = ?, " +
+                       "bathrooms = ?, max_guests = ?, amenities = ?, availability_status = ? WHERE property_id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
-            pstmt.setInt(1, property.getOwnerId());
+            pstmt.setInt(1, property.getHostId());
             pstmt.setString(2, property.getTitle());
             pstmt.setString(3, property.getDescription());
             pstmt.setString(4, property.getPropertyType().getValue());
-            pstmt.setString(5, property.getAddress());
+            pstmt.setString(5, property.getLocation());
             pstmt.setString(6, property.getCity());
             pstmt.setString(7, property.getState());
             pstmt.setString(8, property.getCountry());
@@ -210,7 +210,7 @@ public class PropertyDAO {
             pstmt.setInt(11, property.getBathrooms());
             pstmt.setInt(12, property.getMaxGuests());
             pstmt.setString(13, property.getAmenities());
-            pstmt.setString(14, property.getStatus().getValue());
+            pstmt.setBoolean(14, property.isAvailabilityStatus());
             pstmt.setInt(15, property.getPropertyId());
             
             int affectedRows = pstmt.executeUpdate();
@@ -250,7 +250,7 @@ public class PropertyDAO {
      */
     public List<Property> getAvailableProperties() {
         List<Property> properties = new ArrayList<>();
-        String query = "SELECT * FROM properties WHERE status = 'AVAILABLE'";
+        String query = "SELECT * FROM properties WHERE availability_status = true";
         
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
@@ -259,11 +259,11 @@ public class PropertyDAO {
             while (rs.next()) {
                 Property property = new Property();
                 property.setPropertyId(rs.getInt("property_id"));
-                property.setOwnerId(rs.getInt("owner_id"));
+                property.setHostId(rs.getInt("host_id"));
                 property.setTitle(rs.getString("title"));
                 property.setDescription(rs.getString("description"));
                 property.setPropertyType(Property.PropertyType.fromString(rs.getString("property_type")));
-                property.setAddress(rs.getString("address"));
+                property.setLocation(rs.getString("location"));
                 property.setCity(rs.getString("city"));
                 property.setState(rs.getString("state"));
                 property.setCountry(rs.getString("country"));
@@ -272,7 +272,7 @@ public class PropertyDAO {
                 property.setBathrooms(rs.getInt("bathrooms"));
                 property.setMaxGuests(rs.getInt("max_guests"));
                 property.setAmenities(rs.getString("amenities"));
-                property.setStatus(Property.Status.fromString(rs.getString("status")));
+                property.setAvailabilityStatus(rs.getBoolean("availability_status"));
                 property.setCreatedAt(rs.getTimestamp("created_at"));
                 property.setUpdatedAt(rs.getTimestamp("updated_at"));
                 properties.add(property);
@@ -291,7 +291,7 @@ public class PropertyDAO {
      */
     public List<Property> searchPropertiesByLocation(String location) {
         List<Property> properties = new ArrayList<>();
-        String query = "SELECT * FROM properties WHERE LOWER(city) LIKE LOWER(?) OR LOWER(address) LIKE LOWER(?)";
+        String query = "SELECT * FROM properties WHERE LOWER(city) LIKE LOWER(?) OR LOWER(location) LIKE LOWER(?)";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -304,11 +304,11 @@ public class PropertyDAO {
                 while (rs.next()) {
                     Property property = new Property();
                     property.setPropertyId(rs.getInt("property_id"));
-                    property.setOwnerId(rs.getInt("owner_id"));
+                    property.setHostId(rs.getInt("host_id"));
                     property.setTitle(rs.getString("title"));
                     property.setDescription(rs.getString("description"));
                     property.setPropertyType(Property.PropertyType.fromString(rs.getString("property_type")));
-                    property.setAddress(rs.getString("address"));
+                    property.setLocation(rs.getString("location"));
                     property.setCity(rs.getString("city"));
                     property.setState(rs.getString("state"));
                     property.setCountry(rs.getString("country"));
@@ -317,7 +317,7 @@ public class PropertyDAO {
                     property.setBathrooms(rs.getInt("bathrooms"));
                     property.setMaxGuests(rs.getInt("max_guests"));
                     property.setAmenities(rs.getString("amenities"));
-                    property.setStatus(Property.Status.fromString(rs.getString("status")));
+                    property.setAvailabilityStatus(rs.getBoolean("availability_status"));
                     property.setCreatedAt(rs.getTimestamp("created_at"));
                     property.setUpdatedAt(rs.getTimestamp("updated_at"));
                     properties.add(property);

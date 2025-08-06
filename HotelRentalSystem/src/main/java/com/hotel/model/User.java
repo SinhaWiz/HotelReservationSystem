@@ -10,17 +10,16 @@ public class User {
     private String username;
     private String password;
     private String email;
-    private String fullName;
+    private String name; // Changed from fullName to match panel usage
     private UserType userType;
-    private String phone;
+    private String phoneNumber; // Changed from phone to match panel usage
     private String address;
-    private Date createdAt;
+    private Date dateOfRegistration; // Changed from createdAt to match panel usage
     private Date updatedAt;
     
     public enum UserType {
-        ADMIN("ADMIN"),
-        OWNER("OWNER"),
-        CUSTOMER("CUSTOMER");
+        HOST("host"),
+        RENTER("renter");
         
         private final String value;
         
@@ -47,29 +46,29 @@ public class User {
     }
     
     // Parameterized constructor
-    public User(int userId, String username, String password, String email, String fullName, 
-                UserType userType, String phone, String address, Date createdAt, Date updatedAt) {
+    public User(int userId, String username, String password, String email, String name, 
+                UserType userType, String phoneNumber, String address, Date dateOfRegistration, Date updatedAt) {
         this.userId = userId;
         this.username = username;
         this.password = password;
         this.email = email;
-        this.fullName = fullName;
+        this.name = name;
         this.userType = userType;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
         this.address = address;
-        this.createdAt = createdAt;
+        this.dateOfRegistration = dateOfRegistration;
         this.updatedAt = updatedAt;
     }
     
     // Constructor without userId (for new user creation)
-    public User(String username, String password, String email, String fullName, 
-                UserType userType, String phone, String address) {
+    public User(String username, String password, String email, String name, 
+                UserType userType, String phoneNumber, String address) {
         this.username = username;
         this.password = password;
         this.email = email;
-        this.fullName = fullName;
+        this.name = name;
         this.userType = userType;
-        this.phone = phone;
+        this.phoneNumber = phoneNumber;
         this.address = address;
     }
     
@@ -106,12 +105,21 @@ public class User {
         this.email = email;
     }
     
+    public String getName() {
+        return name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
+    
+    // Backward compatibility methods
     public String getFullName() {
-        return fullName;
+        return name;
     }
     
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.name = fullName;
     }
     
     public UserType getUserType() {
@@ -122,12 +130,21 @@ public class User {
         this.userType = userType;
     }
     
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+    
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+    
+    // Backward compatibility methods
     public String getPhone() {
-        return phone;
+        return phoneNumber;
     }
     
     public void setPhone(String phone) {
-        this.phone = phone;
+        this.phoneNumber = phone;
     }
     
     public String getAddress() {
@@ -138,12 +155,21 @@ public class User {
         this.address = address;
     }
     
+    public Date getDateOfRegistration() {
+        return dateOfRegistration;
+    }
+    
+    public void setDateOfRegistration(Date dateOfRegistration) {
+        this.dateOfRegistration = dateOfRegistration;
+    }
+    
+    // Backward compatibility methods
     public Date getCreatedAt() {
-        return createdAt;
+        return dateOfRegistration;
     }
     
     public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
+        this.dateOfRegistration = createdAt;
     }
     
     public Date getUpdatedAt() {
@@ -160,11 +186,11 @@ public class User {
                 "userId=" + userId +
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
-                ", fullName='" + fullName + '\'' +
+                ", name='" + name + '\'' +
                 ", userType=" + userType +
-                ", phone='" + phone + '\'' +
+                ", phoneNumber='" + phoneNumber + '\'' +
                 ", address='" + address + '\'' +
-                ", createdAt=" + createdAt +
+                ", dateOfRegistration=" + dateOfRegistration +
                 ", updatedAt=" + updatedAt +
                 '}';
     }

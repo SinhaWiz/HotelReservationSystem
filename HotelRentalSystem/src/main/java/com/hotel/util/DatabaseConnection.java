@@ -9,9 +9,9 @@ import java.sql.SQLException;
  */
 public class DatabaseConnection {
     // Oracle connection parameters
-    private static final String URL = "jdbc:oracle:thin:@localhost:1521:XE";
-    private static final String USER = "rentalplatform";
-    private static final String PASSWORD = "rentalplatform123";
+    private static final String URL = "jdbc:oracle:thin:@localhost:1521:orcl3";
+    private static final String USER = "BATMAN";
+    private static final String PASSWORD = "sinhawiz";
     
     private static Connection connection = null;
     
