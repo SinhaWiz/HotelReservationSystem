@@ -1,6 +1,9 @@
 package com.hotel.dao;
 
 import com.hotel.model.Booking;
+import com.hotel.model.Customer;
+import com.hotel.model.Room;
+import com.hotel.model.RoomType;
 import com.hotel.util.DatabaseConnection;
 
 import java.sql.*;
@@ -8,295 +11,454 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Data Access Object for Booking entities
+ * Data Access Object for Booking operations
  */
 public class BookingDAO {
     
     /**
-     * Get all bookings from the database
-     * @return List of Booking objects
+     * Create a new booking using stored procedure
      */
-    public List<Booking> getAllBookings() {
-        List<Booking> bookings = new ArrayList<>();
-        String query = "SELECT * FROM Booking";
+    public int createBooking(Booking booking) throws SQLException {
+        String sql = "{call create_booking(?, ?, ?, ?, ?, ?, ?, ?)}";
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)) {
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            
+            // Input parameters
+            cstmt.setInt(1, booking.getCustomerId());
+            cstmt.setInt(2, booking.getRoomId());
+            cstmt.setDate(3, new java.sql.Date(booking.getCheckInDate().getTime()));
+            cstmt.setDate(4, new java.sql.Date(booking.getCheckOutDate().getTime()));
+            cstmt.setString(5, booking.getSpecialRequests());
+            
+            // Output parameters
+            cstmt.registerOutParameter(6, Types.NUMERIC); // booking_id
+            cstmt.registerOutParameter(7, Types.NUMERIC); // total_amount
+            cstmt.registerOutParameter(8, Types.VARCHAR); // message
+            
+            cstmt.execute();
+            
+            int bookingId = cstmt.getInt(6);
+            double totalAmount = cstmt.getDouble(7);
+            String message = cstmt.getString(8);
+            
+            if (bookingId > 0) {
+                booking.setBookingId(bookingId);
+                booking.setTotalAmount(totalAmount);
+                return bookingId;
+            } else {
+                throw new SQLException("Booking creation failed: " + message);
+            }
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt);
+        }
+    }
+    
+    /**
+     * Check room availability using stored procedure
+     */
+    public boolean isRoomAvailable(int roomId, java.util.Date checkInDate, java.util.Date checkOutDate) throws SQLException {
+        String sql = "{call check_room_availability(?, ?, ?, ?, ?)}";
+        
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            
+            cstmt.setInt(1, roomId);
+            cstmt.setDate(2, new java.sql.Date(checkInDate.getTime()));
+            cstmt.setDate(3, new java.sql.Date(checkOutDate.getTime()));
+            cstmt.registerOutParameter(4, Types.NUMERIC); // is_available
+            cstmt.registerOutParameter(5, Types.VARCHAR); // message
+            
+            cstmt.execute();
+            
+            int isAvailable = cstmt.getInt(4);
+            return isAvailable == 1;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt);
+        }
+    }
+    
+    /**
+     * Check in customer using stored procedure
+     */
+    public boolean checkInCustomer(int bookingId) throws SQLException {
+        String sql = "{call check_in_customer(?, ?)}";
+        
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            
+            cstmt.setInt(1, bookingId);
+            cstmt.registerOutParameter(2, Types.VARCHAR); // message
+            
+            cstmt.execute();
+            
+            String message = cstmt.getString(2);
+            return message.contains("successfully");
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt);
+        }
+    }
+    
+    /**
+     * Check out customer using stored procedure
+     */
+    public boolean checkOutCustomer(int bookingId) throws SQLException {
+        String sql = "{call check_out_customer(?, ?)}";
+        
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            
+            cstmt.setInt(1, bookingId);
+            cstmt.registerOutParameter(2, Types.VARCHAR); // message
+            
+            cstmt.execute();
+            
+            String message = cstmt.getString(2);
+            return message.contains("successfully");
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt);
+        }
+    }
+    
+    /**
+     * Cancel booking using stored procedure
+     */
+    public boolean cancelBooking(int bookingId) throws SQLException {
+        String sql = "{call cancel_booking(?, ?)}";
+        
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            
+            cstmt.setInt(1, bookingId);
+            cstmt.registerOutParameter(2, Types.VARCHAR); // message
+            
+            cstmt.execute();
+            
+            String message = cstmt.getString(2);
+            return message.contains("successfully");
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt);
+        }
+    }
+    
+    /**
+     * Find booking by ID with customer and room details
+     */
+    public Booking findById(int bookingId) throws SQLException {
+        String sql = "SELECT b.booking_id, b.customer_id, b.room_id, b.check_in_date, " +
+                    "b.check_out_date, b.actual_check_in, b.actual_check_out, b.booking_date, " +
+                    "b.total_amount, b.discount_applied, b.extra_charges, b.payment_status, " +
+                    "b.booking_status, b.special_requests, b.created_by, " +
+                    "c.first_name, c.last_name, c.email, c.phone, " +
+                    "r.room_number, rt.type_name, rt.base_price " +
+                    "FROM bookings b " +
+                    "JOIN customers c ON b.customer_id = c.customer_id " +
+                    "JOIN rooms r ON b.room_id = r.room_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
+                    "WHERE b.booking_id = ?";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, bookingId);
+            
+            rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                return mapResultSetToBookingWithDetails(rs);
+            }
+            
+            return null;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, pstmt, rs);
+        }
+    }
+    
+    /**
+     * Get all current reservations using cursor procedure
+     */
+    public List<Booking> getCurrentReservations() throws SQLException {
+        String sql = "{call get_current_reservations(?)}";
+        
+        Connection conn = null;
+        CallableStatement cstmt = null;
+        ResultSet rs = null;
+        List<Booking> bookings = new ArrayList<>();
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            cstmt = conn.prepareCall(sql);
+            cstmt.registerOutParameter(1, oracle.jdbc.OracleTypes.CURSOR);
+            
+            cstmt.execute();
+            
+            rs = (ResultSet) cstmt.getObject(1);
             
             while (rs.next()) {
-                Booking booking = new Booking();
-                booking.setBookingId(rs.getInt("booking_id"));
-                booking.setPropertyId(rs.getInt("property_id"));
-                booking.setRenterId(rs.getInt("renter_id"));
-                booking.setCheckInDate(rs.getDate("check_in_date"));
-                booking.setCheckOutDate(rs.getDate("check_out_date"));
-                booking.setTotalPrice(rs.getBigDecimal("total_price"));
-                booking.setBookingStatus(Booking.BookingStatus.fromString(rs.getString("booking_status")));
-                bookings.add(booking);
+                bookings.add(mapCursorResultToBooking(rs));
             }
-        } catch (SQLException e) {
-            System.err.println("Error getting all bookings: " + e.getMessage());
+            
+            return bookings;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, cstmt, rs);
         }
-        
-        return bookings;
     }
     
     /**
-     * Get a booking by ID
-     * @param bookingId The ID of the booking to retrieve
-     * @return Booking object if found, null otherwise
+     * Get bookings by customer ID
      */
-    public Booking getBookingById(int bookingId) {
-        String query = "SELECT * FROM Booking WHERE booking_id = ?";
+    public List<Booking> findByCustomerId(int customerId) throws SQLException {
+        String sql = "SELECT b.booking_id, b.customer_id, b.room_id, b.check_in_date, " +
+                    "b.check_out_date, b.actual_check_in, b.actual_check_out, b.booking_date, " +
+                    "b.total_amount, b.discount_applied, b.extra_charges, b.payment_status, " +
+                    "b.booking_status, b.special_requests, b.created_by, " +
+                    "r.room_number, rt.type_name " +
+                    "FROM bookings b " +
+                    "JOIN rooms r ON b.room_id = r.room_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
+                    "WHERE b.customer_id = ? " +
+                    "ORDER BY b.booking_date DESC";
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            
-            pstmt.setInt(1, bookingId);
-            
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    Booking booking = new Booking();
-                    booking.setBookingId(rs.getInt("booking_id"));
-                    booking.setPropertyId(rs.getInt("property_id"));
-                    booking.setRenterId(rs.getInt("renter_id"));
-                    booking.setCheckInDate(rs.getDate("check_in_date"));
-                    booking.setCheckOutDate(rs.getDate("check_out_date"));
-                    booking.setTotalPrice(rs.getBigDecimal("total_price"));
-                    booking.setBookingStatus(Booking.BookingStatus.fromString(rs.getString("booking_status")));
-                    return booking;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting booking by ID: " + e.getMessage());
-        }
-        
-        return null;
-    }
-    
-    /**
-     * Get all bookings for a property
-     * @param propertyId The ID of the property
-     * @return List of Booking objects for the specified property
-     */
-    public List<Booking> getBookingsByPropertyId(int propertyId) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         List<Booking> bookings = new ArrayList<>();
-        String query = "SELECT * FROM Booking WHERE property_id = ?";
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try {
+            conn = DatabaseConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setInt(1, customerId);
             
-            pstmt.setInt(1, propertyId);
+            rs = pstmt.executeQuery();
             
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking booking = new Booking();
-                    booking.setBookingId(rs.getInt("booking_id"));
-                    booking.setPropertyId(rs.getInt("property_id"));
-                    booking.setRenterId(rs.getInt("renter_id"));
-                    booking.setCheckInDate(rs.getDate("check_in_date"));
-                    booking.setCheckOutDate(rs.getDate("check_out_date"));
-                    booking.setTotalPrice(rs.getBigDecimal("total_price"));
-                    booking.setBookingStatus(Booking.BookingStatus.fromString(rs.getString("booking_status")));
-                    bookings.add(booking);
-                }
+            while (rs.next()) {
+                bookings.add(mapResultSetToBooking(rs));
             }
-        } catch (SQLException e) {
-            System.err.println("Error getting bookings by property ID: " + e.getMessage());
+            
+            return bookings;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, pstmt, rs);
         }
-        
-        return bookings;
     }
     
     /**
-     * Get all bookings for a renter
-     * @param renterId The ID of the renter
-     * @return List of Booking objects for the specified renter
+     * Get bookings by date range
      */
-    public List<Booking> getBookingsByRenterId(int renterId) {
+    public List<Booking> findByDateRange(java.util.Date startDate, java.util.Date endDate) throws SQLException {
+        String sql = "SELECT b.booking_id, b.customer_id, b.room_id, b.check_in_date, " +
+                    "b.check_out_date, b.actual_check_in, b.actual_check_out, b.booking_date, " +
+                    "b.total_amount, b.discount_applied, b.extra_charges, b.payment_status, " +
+                    "b.booking_status, b.special_requests, b.created_by, " +
+                    "c.first_name, c.last_name, r.room_number, rt.type_name " +
+                    "FROM bookings b " +
+                    "JOIN customers c ON b.customer_id = c.customer_id " +
+                    "JOIN rooms r ON b.room_id = r.room_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
+                    "WHERE b.check_in_date BETWEEN ? AND ? " +
+                    "ORDER BY b.check_in_date";
+        
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
         List<Booking> bookings = new ArrayList<>();
-        String query = "SELECT * FROM Booking WHERE renter_id = ?";
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+        try {
+            conn = DatabaseConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
+            pstmt.setDate(1, new java.sql.Date(startDate.getTime()));
+            pstmt.setDate(2, new java.sql.Date(endDate.getTime()));
             
-            pstmt.setInt(1, renterId);
+            rs = pstmt.executeQuery();
             
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking booking = new Booking();
-                    booking.setBookingId(rs.getInt("booking_id"));
-                    booking.setPropertyId(rs.getInt("property_id"));
-                    booking.setRenterId(rs.getInt("renter_id"));
-                    booking.setCheckInDate(rs.getDate("check_in_date"));
-                    booking.setCheckOutDate(rs.getDate("check_out_date"));
-                    booking.setTotalPrice(rs.getBigDecimal("total_price"));
-                    booking.setBookingStatus(Booking.BookingStatus.fromString(rs.getString("booking_status")));
-                    bookings.add(booking);
-                }
+            while (rs.next()) {
+                bookings.add(mapResultSetToBookingWithDetails(rs));
             }
-        } catch (SQLException e) {
-            System.err.println("Error getting bookings by renter ID: " + e.getMessage());
+            
+            return bookings;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, pstmt, rs);
         }
-        
-        return bookings;
     }
     
     /**
-     * Get all bookings by status
-     * @param status The booking status to filter by
-     * @return List of Booking objects with the specified status
+     * Update booking
      */
-    public List<Booking> getBookingsByStatus(Booking.BookingStatus status) {
-        List<Booking> bookings = new ArrayList<>();
-        String query = "SELECT * FROM Booking WHERE booking_status = ?";
+    public boolean updateBooking(Booking booking) throws SQLException {
+        String sql = "UPDATE bookings SET check_in_date = ?, check_out_date = ?, " +
+                    "total_amount = ?, special_requests = ? WHERE booking_id = ?";
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        
+        try {
+            conn = DatabaseConnection.getConnection();
+            pstmt = conn.prepareStatement(sql);
             
-            pstmt.setString(1, status.getValue());
+            pstmt.setDate(1, new java.sql.Date(booking.getCheckInDate().getTime()));
+            pstmt.setDate(2, new java.sql.Date(booking.getCheckOutDate().getTime()));
+            pstmt.setDouble(3, booking.getTotalAmount());
+            pstmt.setString(4, booking.getSpecialRequests());
+            pstmt.setInt(5, booking.getBookingId());
             
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    Booking booking = new Booking();
-                    booking.setBookingId(rs.getInt("booking_id"));
-                    booking.setPropertyId(rs.getInt("property_id"));
-                    booking.setRenterId(rs.getInt("renter_id"));
-                    booking.setCheckInDate(rs.getDate("check_in_date"));
-                    booking.setCheckOutDate(rs.getDate("check_out_date"));
-                    booking.setTotalPrice(rs.getBigDecimal("total_price"));
-                    booking.setBookingStatus(status);
-                    bookings.add(booking);
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error getting bookings by status: " + e.getMessage());
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0;
+            
+        } finally {
+            DatabaseConnection.closeResources(conn, pstmt);
         }
-        
-        return bookings;
     }
     
     /**
-     * Add a new booking to the database
-     * @param booking The Booking object to add
-     * @return true if successful, false otherwise
+     * Map ResultSet to Booking object
      */
-    public boolean addBooking(Booking booking) {
-        String query = "INSERT INTO Booking (property_id, renter_id, check_in_date, check_out_date, " +
-                       "total_price, booking_status) VALUES (?, ?, ?, ?, ?, ?)";
+    private Booking mapResultSetToBooking(ResultSet rs) throws SQLException {
+        Booking booking = new Booking();
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
-            
-            pstmt.setInt(1, booking.getPropertyId());
-            pstmt.setInt(2, booking.getRenterId());
-            pstmt.setDate(3, new java.sql.Date(booking.getCheckInDate().getTime()));
-            pstmt.setDate(4, new java.sql.Date(booking.getCheckOutDate().getTime()));
-            pstmt.setBigDecimal(5, booking.getTotalPrice());
-            pstmt.setString(6, booking.getBookingStatus().getValue());
-            
-            int affectedRows = pstmt.executeUpdate();
-            
-            if (affectedRows > 0) {
-                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        booking.setBookingId(generatedKeys.getInt(1));
-                    }
-                }
-                return true;
-            }
-        } catch (SQLException e) {
-            System.err.println("Error adding booking: " + e.getMessage());
+        booking.setBookingId(rs.getInt("booking_id"));
+        booking.setCustomerId(rs.getInt("customer_id"));
+        booking.setRoomId(rs.getInt("room_id"));
+        
+        Date checkInDate = rs.getDate("check_in_date");
+        if (checkInDate != null) {
+            booking.setCheckInDate(new java.util.Date(checkInDate.getTime()));
         }
         
-        return false;
+        Date checkOutDate = rs.getDate("check_out_date");
+        if (checkOutDate != null) {
+            booking.setCheckOutDate(new java.util.Date(checkOutDate.getTime()));
+        }
+        
+        Date actualCheckIn = rs.getDate("actual_check_in");
+        if (actualCheckIn != null) {
+            booking.setActualCheckIn(new java.util.Date(actualCheckIn.getTime()));
+        }
+        
+        Date actualCheckOut = rs.getDate("actual_check_out");
+        if (actualCheckOut != null) {
+            booking.setActualCheckOut(new java.util.Date(actualCheckOut.getTime()));
+        }
+        
+        Date bookingDate = rs.getDate("booking_date");
+        if (bookingDate != null) {
+            booking.setBookingDate(new java.util.Date(bookingDate.getTime()));
+        }
+        
+        booking.setTotalAmount(rs.getDouble("total_amount"));
+        booking.setDiscountApplied(rs.getDouble("discount_applied"));
+        booking.setExtraCharges(rs.getDouble("extra_charges"));
+        booking.setPaymentStatusFromString(rs.getString("payment_status"));
+        booking.setBookingStatusFromString(rs.getString("booking_status"));
+        booking.setSpecialRequests(rs.getString("special_requests"));
+        booking.setCreatedBy(rs.getString("created_by"));
+        
+        return booking;
     }
     
     /**
-     * Update an existing booking in the database
-     * @param booking The Booking object to update
-     * @return true if successful, false otherwise
+     * Map ResultSet to Booking object with customer and room details
      */
-    public boolean updateBooking(Booking booking) {
-        String query = "UPDATE Booking SET property_id = ?, renter_id = ?, check_in_date = ?, " +
-                       "check_out_date = ?, total_price = ?, booking_status = ? WHERE booking_id = ?";
+    private Booking mapResultSetToBookingWithDetails(ResultSet rs) throws SQLException {
+        Booking booking = mapResultSetToBooking(rs);
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            
-            pstmt.setInt(1, booking.getPropertyId());
-            pstmt.setInt(2, booking.getRenterId());
-            pstmt.setDate(3, new java.sql.Date(booking.getCheckInDate().getTime()));
-            pstmt.setDate(4, new java.sql.Date(booking.getCheckOutDate().getTime()));
-            pstmt.setBigDecimal(5, booking.getTotalPrice());
-            pstmt.setString(6, booking.getBookingStatus().getValue());
-            pstmt.setInt(7, booking.getBookingId());
-            
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            System.err.println("Error updating booking: " + e.getMessage());
-        }
+        // Add customer details
+        Customer customer = new Customer();
+        customer.setCustomerId(booking.getCustomerId());
+        customer.setFirstName(rs.getString("first_name"));
+        customer.setLastName(rs.getString("last_name"));
+        customer.setEmail(rs.getString("email"));
+        customer.setPhone(rs.getString("phone"));
+        booking.setCustomer(customer);
         
-        return false;
+        // Add room details
+        Room room = new Room();
+        room.setRoomId(booking.getRoomId());
+        room.setRoomNumber(rs.getString("room_number"));
+        
+        RoomType roomType = new RoomType();
+        roomType.setTypeName(rs.getString("type_name"));
+        roomType.setBasePrice(rs.getDouble("base_price"));
+        room.setRoomType(roomType);
+        
+        booking.setRoom(room);
+        
+        return booking;
     }
     
     /**
-     * Delete a booking from the database
-     * @param bookingId The ID of the booking to delete
-     * @return true if successful, false otherwise
+     * Map cursor result to Booking object (for stored procedure results)
      */
-    public boolean deleteBooking(int bookingId) {
-        String query = "DELETE FROM Booking WHERE booking_id = ?";
+    private Booking mapCursorResultToBooking(ResultSet rs) throws SQLException {
+        Booking booking = new Booking();
         
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            
-            pstmt.setInt(1, bookingId);
-            
-            int affectedRows = pstmt.executeUpdate();
-            return affectedRows > 0;
-        } catch (SQLException e) {
-            System.err.println("Error deleting booking: " + e.getMessage());
+        booking.setBookingId(rs.getInt("booking_id"));
+        
+        // Customer details
+        Customer customer = new Customer();
+        customer.setFirstName(rs.getString("customer_name").split(" ")[0]);
+        customer.setLastName(rs.getString("customer_name").split(" ")[1]);
+        customer.setEmail(rs.getString("email"));
+        customer.setPhone(rs.getString("phone"));
+        booking.setCustomer(customer);
+        
+        // Room details
+        Room room = new Room();
+        room.setRoomNumber(rs.getString("room_number"));
+        
+        RoomType roomType = new RoomType();
+        roomType.setTypeName(rs.getString("room_type"));
+        room.setRoomType(roomType);
+        
+        booking.setRoom(room);
+        
+        // Booking details
+        Date checkInDate = rs.getDate("check_in_date");
+        if (checkInDate != null) {
+            booking.setCheckInDate(new java.util.Date(checkInDate.getTime()));
         }
         
-        return false;
-    }
-    
-    /**
-     * Check if a property is available for the given date range
-     * @param propertyId The ID of the property to check
-     * @param checkInDate The check-in date
-     * @param checkOutDate The check-out date
-     * @return true if the property is available, false otherwise
-     */
-    public boolean isPropertyAvailable(int propertyId, Date checkInDate, Date checkOutDate) {
-        String query = "SELECT COUNT(*) FROM Booking WHERE property_id = ? AND booking_status != 'cancelled' " +
-                       "AND ((check_in_date <= ? AND check_out_date >= ?) OR " +
-                       "(check_in_date <= ? AND check_out_date >= ?) OR " +
-                       "(check_in_date >= ? AND check_out_date <= ?))";
-        
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-            
-            pstmt.setInt(1, propertyId);
-            pstmt.setDate(2, checkInDate);
-            pstmt.setDate(3, checkInDate);
-            pstmt.setDate(4, checkOutDate);
-            pstmt.setDate(5, checkOutDate);
-            pstmt.setDate(6, checkInDate);
-            pstmt.setDate(7, checkOutDate);
-            
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) == 0;
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Error checking property availability: " + e.getMessage());
+        Date checkOutDate = rs.getDate("check_out_date");
+        if (checkOutDate != null) {
+            booking.setCheckOutDate(new java.util.Date(checkOutDate.getTime()));
         }
         
-        return false;
+        booking.setTotalAmount(rs.getDouble("total_amount"));
+        booking.setBookingStatusFromString(rs.getString("booking_status"));
+        booking.setSpecialRequests(rs.getString("special_requests"));
+        
+        return booking;
     }
-} 
+}
+
