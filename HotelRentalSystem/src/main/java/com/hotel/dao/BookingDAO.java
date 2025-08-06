@@ -1,5 +1,4 @@
 package com.hotel.dao;
-
 import com.hotel.model.Booking;
 import com.hotel.model.Customer;
 import com.hotel.model.Room;
@@ -9,7 +8,6 @@ import com.hotel.util.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * Data Access Object for Booking operations
  */

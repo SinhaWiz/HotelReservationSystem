@@ -1,6 +1,6 @@
 package com.hotel.dao;
 import com.hotel.util.DatabaseConnection;
-import com.hotel.model.BlackListedCustomer;
+import com.hotel.model.BlacklistedCustomer;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

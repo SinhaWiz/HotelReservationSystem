@@ -20,7 +20,7 @@ CREATE TABLE room_service_assignments (
     service_id          NUMBER(8) NOT NULL,
     is_complimentary    CHAR(1) DEFAULT 'N',
     assigned_date       DATE DEFAULT SYSDATE,
-    CONSTRAINT fk_rsa_room_type FOREIGN KEY (room_type_id) REFERENCES room_types(room_type_id),
+    CONSTRAINT fk_rsa_room_type FOREIGN KEY (room_type_id) REFERENCES room_types(type_id),
     CONSTRAINT fk_rsa_service FOREIGN KEY (service_id) REFERENCES room_services(service_id),
     CONSTRAINT chk_complimentary CHECK (is_complimentary IN ('Y', 'N')),
     CONSTRAINT uk_room_service UNIQUE (room_type_id, service_id)
@@ -237,10 +237,10 @@ INSERT INTO room_services (service_id, service_name, service_description, servic
 
 -- Assign services to room types (all services available to all room types for now)
 INSERT INTO room_service_assignments (assignment_id, room_type_id, service_id, is_complimentary)
-SELECT assignment_seq.NEXTVAL, rt.room_type_id, rs.service_id, 
+SELECT assignment_seq.NEXTVAL, rt.type_id, rs.service_id,
        CASE WHEN rs.service_name IN ('Room Cleaning', 'Extra Towels') THEN 'Y' ELSE 'N' END
 FROM room_types rt, room_services rs
-WHERE rt.is_active = 'Y' AND rs.is_active = 'Y';
+WHERE  rs.is_active = 'Y';
 
 COMMIT;
 
@@ -279,17 +279,17 @@ SELECT
     r.room_id,
     r.room_number,
     rt.type_name,
-    rt.base_rate,
+    rt.BASE_PRICE,
     rt.max_occupancy,
     r.floor_number,
-    r.room_status,
+    r.status,
     COUNT(rsa.service_id) as available_services
 FROM rooms r
-JOIN room_types rt ON r.room_type_id = rt.room_type_id
-LEFT JOIN room_service_assignments rsa ON rt.room_type_id = rsa.room_type_id
-WHERE r.room_status = 'AVAILABLE'
-GROUP BY r.room_id, r.room_number, rt.type_name, rt.base_rate, rt.max_occupancy, 
-         r.floor_number, r.room_status
+JOIN room_types rt ON r.type_id = rt.type_id
+LEFT JOIN room_service_assignments rsa ON rt.type_id = rsa.room_type_id
+WHERE r.status = 'AVAILABLE'
+GROUP BY r.room_id, r.room_number, rt.type_name, rt.base_price, rt.max_occupancy,
+         r.floor_number, r.status, rt.BASE_PRICE, r.status
 ORDER BY r.room_number;
 
 CREATE OR REPLACE VIEW v_expired_reservations AS
