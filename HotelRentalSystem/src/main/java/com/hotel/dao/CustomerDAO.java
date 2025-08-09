@@ -35,7 +35,7 @@ public class CustomerDAO {
             pstmt.setString(5, customer.getAddress());
             
             if (customer.getDateOfBirth() != null) {
-                pstmt.setDate(6, new java.sql.Date(customer.getDateOfBirth().getTime()));
+                pstmt.setDate(6, new Date(customer.getDateOfBirth().getTime()));
             } else {
                 pstmt.setNull(6, Types.DATE);
             }
@@ -172,7 +172,7 @@ public class CustomerDAO {
             pstmt.setString(5, customer.getAddress());
             
             if (customer.getDateOfBirth() != null) {
-                pstmt.setDate(6, new java.sql.Date(customer.getDateOfBirth().getTime()));
+                pstmt.setDate(6, new Date(customer.getDateOfBirth().getTime()));
             } else {
                 pstmt.setNull(6, Types.DATE);
             }

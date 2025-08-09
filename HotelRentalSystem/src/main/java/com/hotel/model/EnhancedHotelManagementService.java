@@ -1,7 +1,6 @@
 package com.hotel.model;
 
 import com.hotel.dao.*;
-
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
@@ -20,7 +19,7 @@ public class EnhancedHotelManagementService {
     private ServiceUsageDAO serviceUsageDAO;
     private BlacklistedCustomerDAO blacklistedCustomerDAO;
     private InvoiceDAO invoiceDAO;
-    
+
     public EnhancedHotelManagementService() {
         this.customerDAO = new CustomerDAO();
         this.bookingDAO = new BookingDAO();
@@ -63,7 +62,7 @@ public class EnhancedHotelManagementService {
     
     public Booking createBooking(Booking booking) throws SQLException {
         // Check if customer is blacklisted
-        if (blacklistedCustomerDAO.isCustomerBlacklisted(booking.getCustomerId())) {
+       blacklistedCustomerDAO.isCustomerBlacklisted(booking.getCustomerId()) {
             throw new SQLException("Cannot create booking for blacklisted customer");
         }
         
@@ -77,7 +76,7 @@ public class EnhancedHotelManagementService {
     }
     
     public Booking getBooking(long bookingId) throws SQLException {
-        return bookingDAO.findById(bookingId);
+        return bookingDAO.findById((int) bookingId);
     }
     
     public List<Booking> getAllBookings() throws SQLException {

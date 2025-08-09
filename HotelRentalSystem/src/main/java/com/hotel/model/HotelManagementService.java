@@ -1,6 +1,7 @@
 package com.hotel.model;
 
 import com.hotel.dao.*;
+import com.hotel.model.*;
 
 import java.sql.SQLException;
 import java.util.Date;

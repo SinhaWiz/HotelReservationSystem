@@ -32,9 +32,9 @@ public class DatabaseConnection {
         Properties props = new Properties();
         try (FileInputStream fis = new FileInputStream(CONFIG_FILE)) {
             props.load(fis);
-            DB_URL = props.getProperty("db.url", "jdbc:oracle:thin:@localhost:1521:XE");
-            DB_USERNAME = props.getProperty("db.username", "hotel_admin");
-            DB_PASSWORD = props.getProperty("db.password", "password");
+            DB_URL = props.getProperty("db.url", "jdbc:oracle:thin:@localhost:1521:orcl3");
+            DB_USERNAME = props.getProperty("db.username", "CATWOMAN");
+            DB_PASSWORD = props.getProperty("db.password", "sinhawiz");
             DB_DRIVER = props.getProperty("db.driver", "oracle.jdbc.driver.OracleDriver");
         } catch (IOException e) {
             // Use default values if config file not found

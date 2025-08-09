@@ -1,6 +1,8 @@
 package com.hotel.dao;
-import com.hotel.util.DatabaseConnection;
+
 import com.hotel.model.BlacklistedCustomer;
+import com.hotel.util.DatabaseConnection;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -249,7 +251,7 @@ public class BlacklistedCustomerDAO {
             
             stmt.setString(1, blacklistedCustomer.getBlacklistReason());
             if (blacklistedCustomer.getExpiryDate() != null) {
-                stmt.setDate(2, new java.sql.Date(blacklistedCustomer.getExpiryDate().getTime()));
+                stmt.setDate(2, new Date(blacklistedCustomer.getExpiryDate().getTime()));
             } else {
                 stmt.setNull(2, Types.DATE);
             }

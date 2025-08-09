@@ -1,4 +1,5 @@
 package com.hotel.dao;
+
 import com.hotel.model.Booking;
 import com.hotel.model.Customer;
 import com.hotel.model.Room;
@@ -8,6 +9,7 @@ import com.hotel.util.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
 /**
  * Data Access Object for Booking operations
  */
@@ -29,8 +31,8 @@ public class BookingDAO {
             // Input parameters
             cstmt.setInt(1, booking.getCustomerId());
             cstmt.setInt(2, booking.getRoomId());
-            cstmt.setDate(3, new java.sql.Date(booking.getCheckInDate().getTime()));
-            cstmt.setDate(4, new java.sql.Date(booking.getCheckOutDate().getTime()));
+            cstmt.setDate(3, new Date(booking.getCheckInDate().getTime()));
+            cstmt.setDate(4, new Date(booking.getCheckOutDate().getTime()));
             cstmt.setString(5, booking.getSpecialRequests());
             
             // Output parameters
@@ -71,8 +73,8 @@ public class BookingDAO {
             cstmt = conn.prepareCall(sql);
             
             cstmt.setInt(1, roomId);
-            cstmt.setDate(2, new java.sql.Date(checkInDate.getTime()));
-            cstmt.setDate(3, new java.sql.Date(checkOutDate.getTime()));
+            cstmt.setDate(2, new Date(checkInDate.getTime()));
+            cstmt.setDate(3, new Date(checkOutDate.getTime()));
             cstmt.registerOutParameter(4, Types.NUMERIC); // is_available
             cstmt.registerOutParameter(5, Types.VARCHAR); // message
             
@@ -295,8 +297,8 @@ public class BookingDAO {
         try {
             conn = DatabaseConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
-            pstmt.setDate(1, new java.sql.Date(startDate.getTime()));
-            pstmt.setDate(2, new java.sql.Date(endDate.getTime()));
+            pstmt.setDate(1, new Date(startDate.getTime()));
+            pstmt.setDate(2, new Date(endDate.getTime()));
             
             rs = pstmt.executeQuery();
             
@@ -325,8 +327,8 @@ public class BookingDAO {
             conn = DatabaseConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             
-            pstmt.setDate(1, new java.sql.Date(booking.getCheckInDate().getTime()));
-            pstmt.setDate(2, new java.sql.Date(booking.getCheckOutDate().getTime()));
+            pstmt.setDate(1, new Date(booking.getCheckInDate().getTime()));
+            pstmt.setDate(2, new Date(booking.getCheckOutDate().getTime()));
             pstmt.setDouble(3, booking.getTotalAmount());
             pstmt.setString(4, booking.getSpecialRequests());
             pstmt.setInt(5, booking.getBookingId());
