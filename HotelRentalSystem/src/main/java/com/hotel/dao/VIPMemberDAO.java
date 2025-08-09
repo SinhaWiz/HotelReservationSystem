@@ -34,13 +34,13 @@ public class VIPMemberDAO {
             pstmt.setDouble(3, vipMember.getDiscountPercentage());
             
             if (vipMember.getMembershipStartDate() != null) {
-                pstmt.setDate(4, new java.sql.Date(vipMember.getMembershipStartDate().getTime()));
+                pstmt.setDate(4, new Date(vipMember.getMembershipStartDate().getTime()));
             } else {
-                pstmt.setDate(4, new java.sql.Date(System.currentTimeMillis()));
+                pstmt.setDate(4, new Date(System.currentTimeMillis()));
             }
             
             if (vipMember.getMembershipEndDate() != null) {
-                pstmt.setDate(5, new java.sql.Date(vipMember.getMembershipEndDate().getTime()));
+                pstmt.setDate(5, new Date(vipMember.getMembershipEndDate().getTime()));
             } else {
                 pstmt.setNull(5, Types.DATE);
             }
@@ -224,7 +224,7 @@ public class VIPMemberDAO {
             pstmt.setDouble(2, vipMember.getDiscountPercentage());
             
             if (vipMember.getMembershipEndDate() != null) {
-                pstmt.setDate(3, new java.sql.Date(vipMember.getMembershipEndDate().getTime()));
+                pstmt.setDate(3, new Date(vipMember.getMembershipEndDate().getTime()));
             } else {
                 pstmt.setNull(3, Types.DATE);
             }

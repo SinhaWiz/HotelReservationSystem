@@ -176,8 +176,8 @@ public class RoomDAO {
             conn = DatabaseConnection.getConnection();
             pstmt = conn.prepareStatement(sql);
             
-            java.sql.Date sqlCheckInDate = new java.sql.Date(checkInDate.getTime());
-            java.sql.Date sqlCheckOutDate = new java.sql.Date(checkOutDate.getTime());
+            Date sqlCheckInDate = new Date(checkInDate.getTime());
+            Date sqlCheckOutDate = new Date(checkOutDate.getTime());
             
             pstmt.setDate(1, sqlCheckInDate);
             pstmt.setDate(2, sqlCheckInDate);
@@ -271,7 +271,7 @@ public class RoomDAO {
             pstmt = conn.prepareStatement(sql);
             
             if (maintenanceDate != null) {
-                pstmt.setDate(1, new java.sql.Date(maintenanceDate.getTime()));
+                pstmt.setDate(1, new Date(maintenanceDate.getTime()));
             } else {
                 pstmt.setNull(1, Types.DATE);
             }
@@ -329,8 +329,8 @@ public class RoomDAO {
             conn = DatabaseConnection.getConnection();
             cstmt = conn.prepareCall(sql);
             
-            cstmt.setDate(1, new java.sql.Date(startDate.getTime()));
-            cstmt.setDate(2, new java.sql.Date(endDate.getTime()));
+            cstmt.setDate(1, new Date(startDate.getTime()));
+            cstmt.setDate(2, new Date(endDate.getTime()));
             cstmt.registerOutParameter(3, oracle.jdbc.OracleTypes.CURSOR);
             
             cstmt.execute();
@@ -375,8 +375,8 @@ public class RoomDAO {
             cstmt = conn.prepareCall(sql);
             
             cstmt.registerOutParameter(1, Types.NUMERIC);
-            cstmt.setDate(2, new java.sql.Date(startDate.getTime()));
-            cstmt.setDate(3, new java.sql.Date(endDate.getTime()));
+            cstmt.setDate(2, new Date(startDate.getTime()));
+            cstmt.setDate(3, new Date(endDate.getTime()));
             
             cstmt.execute();
             
