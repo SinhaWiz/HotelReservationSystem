@@ -1,7 +1,7 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
-import com.hotel.service.EnhancedHotelManagementService;
+import com.hotel.model.EnhancedHotelManagementService;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -359,7 +359,7 @@ public class InvoiceManagementPanel extends JPanel {
             for (Booking booking : bookings) {
                 // Only show checked-out bookings that don't have invoices yet
                 if ("CHECKED_OUT".equals(booking.getBookingStatus())) {
-                    List<Invoice> existingInvoices = hotelService.getBookingInvoices(booking.getBookingId());
+                    List<Invoice> existingInvoices = hotelService.getBookingInvoices((int) booking.getBookingId());
                     if (existingInvoices.isEmpty()) {
                         Customer customer = hotelService.getCustomer(booking.getCustomerId());
                         String displayText = String.format("Booking %d - %s (Room %d) - $%.2f", 
@@ -386,7 +386,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         try {
             long bookingId = Long.parseLong(selectedBooking.split(" - ")[0].replace("Booking ", ""));
-            Booking booking = hotelService.getBooking(bookingId);
+            Booking booking = hotelService.getBooking((int) bookingId);
             
             if (booking != null) {
                 Customer customer = hotelService.getCustomer(booking.getCustomerId());
@@ -472,7 +472,7 @@ public class InvoiceManagementPanel extends JPanel {
             long bookingId = Long.parseLong(selectedBooking.split(" - ")[0].replace("Booking ", ""));
             double taxRate = Double.parseDouble(taxRateField.getText().trim()) / 100.0;
             
-            Booking booking = hotelService.getBooking(bookingId);
+            Booking booking = hotelService.getBooking((int) bookingId);
             Customer customer = hotelService.getCustomer(booking.getCustomerId());
             List<ServiceUsage> serviceUsage = hotelService.getBookingServiceUsage(bookingId);
             
@@ -527,7 +527,7 @@ public class InvoiceManagementPanel extends JPanel {
                 for (InvoiceLineItem lineItem : invoice.getLineItems()) {
                     Object[] row = {
                         lineItem.getLineItemId(),
-                        lineItem.getItemType(),
+                        lineItem.getItemTypeString(),
                         lineItem.getItemDescription(),
                         lineItem.getQuantity(),
                         lineItem.getFormattedUnitPrice(),

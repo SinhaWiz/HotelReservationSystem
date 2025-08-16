@@ -1,7 +1,7 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
-import com.hotel.service.EnhancedHotelManagementService;
+import com.hotel.model.EnhancedHotelManagementService;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -431,10 +431,9 @@ public class BlacklistManagementPanel extends JPanel {
                 expiryDate = (Date) expiryDateSpinner.getValue();
             }
             
-            int blacklistId = hotelService.blacklistCustomer(customerId, reason, blacklistedBy, 
-                                                           expiryDate != null ? new java.sql.Date(expiryDate.getTime()) : null);
-            
-            showSuccess("Customer blacklisted successfully! Blacklist ID: " + blacklistId);
+            hotelService.blacklistCustomer(customerId, reason, blacklistedBy,
+                expiryDate != null ? expiryDate : null);
+
             clearForm();
             loadBlacklistData();
             updateStatistics();
@@ -634,4 +633,3 @@ public class BlacklistManagementPanel extends JPanel {
         JOptionPane.showMessageDialog(this, message, "Information", JOptionPane.INFORMATION_MESSAGE);
     }
 }
-

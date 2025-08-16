@@ -19,7 +19,8 @@ public class VIPMember {
     private Date membershipEndDate;
     private String benefits;
     private boolean isActive;
-    
+    private int bookingCount;
+
     // Default constructor
     public VIPMember() {
         this.membershipLevel = MembershipLevel.GOLD;
@@ -78,6 +79,9 @@ public class VIPMember {
     public boolean isActive() { return isActive; }
     public void setActive(boolean active) { isActive = active; }
     
+    public int getBookingCount() { return bookingCount; }
+    public void setBookingCount(int bookingCount) { this.bookingCount = bookingCount; }
+
     // Utility methods
     public boolean isExpired() {
         return membershipEndDate != null && membershipEndDate.before(new Date());
@@ -102,29 +106,42 @@ public class VIPMember {
     public String getFormattedDiscountPercentage() {
         return String.format("%.1f%%", discountPercentage);
     }
-    
+
     public static double getDefaultDiscountForLevel(MembershipLevel level) {
         switch (level) {
-            case GOLD: return 10.0;
-            case PLATINUM: return 15.0;
-            case DIAMOND: return 20.0;
-            default: return 5.0;
+            case GOLD:
+                return 10.0;
+            case PLATINUM:
+                return 15.0;
+            case DIAMOND:
+                return 20.0;
+            default:
+                return 5.0;
         }
     }
-    
+
     public static String getDefaultBenefitsForLevel(MembershipLevel level) {
         switch (level) {
-            case GOLD: 
-                return "Free WiFi, Late Checkout, Priority Booking";
-            case PLATINUM: 
-                return "Free WiFi, Late Checkout, Priority Booking, Complimentary Breakfast";
-            case DIAMOND: 
-                return "Free WiFi, Late Checkout, Priority Booking, Complimentary Breakfast, Room Upgrade, Concierge Service";
-            default: 
-                return "Basic VIP Benefits";
+            case GOLD:
+                return "- 10% discount on room rates\n" +
+                       "- Early check-in when available\n" +
+                       "- Welcome drink";
+            case PLATINUM:
+                return "- 15% discount on room rates\n" +
+                       "- Early check-in and late check-out\n" +
+                       "- Welcome drink and fruit basket\n" +
+                       "- Access to executive lounge";
+            case DIAMOND:
+                return "- 20% discount on room rates\n" +
+                       "- Flexible check-in and check-out\n" +
+                       "- Welcome drink and premium amenities\n" +
+                       "- Access to executive lounge\n" +
+                       "- Free spa treatment once per stay";
+            default:
+                return "Basic VIP benefits";
         }
     }
-    
+
     @Override
     public String toString() {
         return "VIPMember{" +
@@ -135,7 +152,7 @@ public class VIPMember {
                 ", isActive=" + isActive +
                 '}';
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -143,10 +160,9 @@ public class VIPMember {
         VIPMember vipMember = (VIPMember) obj;
         return vipId == vipMember.vipId;
     }
-    
+
     @Override
     public int hashCode() {
         return Integer.hashCode(vipId);
     }
 }
-

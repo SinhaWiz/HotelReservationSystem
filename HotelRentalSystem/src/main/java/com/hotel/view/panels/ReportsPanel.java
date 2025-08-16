@@ -1,6 +1,6 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
+
 import com.hotel.model.*;
 
 import javax.swing.*;
@@ -12,14 +12,17 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Calendar;
+import java.util.Map;
+
+import static com.hotel.model.Booking.BookingStatus.*;
 
 /**
  * Panel for reports and analytics
  */
 public class ReportsPanel extends JPanel implements RefreshablePanel {
     
-    private HotelManagementService hotelService;
-    
+    private EnhancedHotelManagementService hotelService;
+
     // Report selection components
     private JComboBox<String> reportTypeCombo;
     private JTextField startDateField;
@@ -39,7 +42,7 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
     private JLabel avgOccupancyLabel;
     private JLabel vipRevenueLabel;
     
-    public ReportsPanel(HotelManagementService hotelService) {
+    public ReportsPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
         initializeComponents();
         layoutComponents();
@@ -306,7 +309,7 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
             };
             tableModel.addRow(row);
             
-            if (booking.getBookingStatus() == Booking.BookingStatus.CHECKED_OUT) {
+            if ("CHECKED_OUT".equals(booking.getBookingStatus())) {
                 totalRevenue += booking.getTotalAmount();
                 completedBookings++;
                 
@@ -324,17 +327,17 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("REVENUE REPORT SUMMARY\\n");
-        summary.append("======================\\n\\n");
-        summary.append(String.format("Report Period: %s to %s\\n", 
+        summary.append("REVENUE REPORT SUMMARY\n");
+        summary.append("======================\n\n");
+        summary.append(String.format("Report Period: %s to %s\n", 
             new SimpleDateFormat("MMM dd, yyyy").format(startDate),
             new SimpleDateFormat("MMM dd, yyyy").format(endDate)));
-        summary.append(String.format("Total Bookings: %d\\n", bookings.size()));
-        summary.append(String.format("Completed Bookings: %d\\n", completedBookings));
-        summary.append(String.format("Total Revenue: $%.2f\\n", totalRevenue));
-        summary.append(String.format("VIP Revenue: $%.2f (%.1f%%)\\n", 
+        summary.append(String.format("Total Bookings: %d\n", bookings.size()));
+        summary.append(String.format("Completed Bookings: %d\n", completedBookings));
+        summary.append(String.format("Total Revenue: $%.2f\n", totalRevenue));
+        summary.append(String.format("VIP Revenue: $%.2f (%.1f%%)\n", 
             vipRevenue, totalRevenue > 0 ? (vipRevenue / totalRevenue * 100) : 0));
-        summary.append(String.format("Average Booking Value: $%.2f\\n", 
+        summary.append(String.format("Average Booking Value: $%.2f\n", 
             completedBookings > 0 ? (totalRevenue / completedBookings) : 0));
         
         summaryArea.setText(summary.toString());
@@ -352,25 +355,20 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         double confirmedAmount = 0, checkedInAmount = 0, checkedOutAmount = 0;
         
         for (Booking booking : bookings) {
-            switch (booking.getBookingStatus()) {
-                case CONFIRMED:
-                    confirmed++;
-                    confirmedAmount += booking.getTotalAmount();
-                    break;
-                case CHECKED_IN:
-                    checkedIn++;
-                    checkedInAmount += booking.getTotalAmount();
-                    break;
-                case CHECKED_OUT:
-                    checkedOut++;
-                    checkedOutAmount += booking.getTotalAmount();
-                    break;
-                case CANCELLED:
-                    cancelled++;
-                    break;
-                case NO_SHOW:
-                    noShow++;
-                    break;
+            String status = booking.getBookingStatus();
+            if ("CONFIRMED".equals(status)) {
+                confirmed++;
+                confirmedAmount += booking.getTotalAmount();
+            } else if ("CHECKED_IN".equals(status)) {
+                checkedIn++;
+                checkedInAmount += booking.getTotalAmount();
+            } else if ("CHECKED_OUT".equals(status)) {
+                checkedOut++;
+                checkedOutAmount += booking.getTotalAmount();
+            } else if ("CANCELLED".equals(status)) {
+                cancelled++;
+            } else if ("NO_SHOW".equals(status)) {
+                noShow++;
             }
         }
         
@@ -410,18 +408,18 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("BOOKING SUMMARY REPORT\\n");
-        summary.append("======================\\n\\n");
-        summary.append(String.format("Report Period: %s to %s\\n", 
+        summary.append("BOOKING SUMMARY REPORT\n");
+        summary.append("======================\n\n");
+        summary.append(String.format("Report Period: %s to %s\n", 
             new SimpleDateFormat("MMM dd, yyyy").format(startDate),
             new SimpleDateFormat("MMM dd, yyyy").format(endDate)));
-        summary.append(String.format("Total Bookings: %d\\n\\n", total));
-        summary.append("Booking Status Breakdown:\\n");
-        summary.append(String.format("- Confirmed: %d (%.1f%%)\\n", confirmed, (double) confirmed / total * 100));
-        summary.append(String.format("- Checked In: %d (%.1f%%)\\n", checkedIn, (double) checkedIn / total * 100));
-        summary.append(String.format("- Checked Out: %d (%.1f%%)\\n", checkedOut, (double) checkedOut / total * 100));
-        summary.append(String.format("- Cancelled: %d (%.1f%%)\\n", cancelled, (double) cancelled / total * 100));
-        summary.append(String.format("- No Show: %d (%.1f%%)\\n", noShow, (double) noShow / total * 100));
+        summary.append(String.format("Total Bookings: %d\n\n", total));
+        summary.append("Booking Status Breakdown:\n");
+        summary.append(String.format("- Confirmed: %d (%.1f%%)\n", confirmed, (double) confirmed / total * 100));
+        summary.append(String.format("- Checked In: %d (%.1f%%)\n", checkedIn, (double) checkedIn / total * 100));
+        summary.append(String.format("- Checked Out: %d (%.1f%%)\n", checkedOut, (double) checkedOut / total * 100));
+        summary.append(String.format("- Cancelled: %d (%.1f%%)\n", cancelled, (double) cancelled / total * 100));
+        summary.append(String.format("- No Show: %d (%.1f%%)\n", noShow, (double) noShow / total * 100));
         
         summaryArea.setText(summary.toString());
     }
@@ -475,16 +473,16 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("CUSTOMER ANALYSIS REPORT\\n");
-        summary.append("========================\\n\\n");
-        summary.append(String.format("Total Customers: %d\\n", customers.size()));
-        summary.append(String.format("VIP Customers: %d (%.1f%%)\\n", vipCustomers, 
+        summary.append("CUSTOMER ANALYSIS REPORT\n");
+        summary.append("========================\n\n");
+        summary.append(String.format("Total Customers: %d\n", customers.size()));
+        summary.append(String.format("VIP Customers: %d (%.1f%%)\n", vipCustomers, 
             customers.size() > 0 ? (double) vipCustomers / customers.size() * 100 : 0));
-        summary.append(String.format("Total Customer Spending: $%.2f\\n", totalSpent));
-        summary.append(String.format("Average Spending per Customer: $%.2f\\n", 
+        summary.append(String.format("Total Customer Spending: $%.2f\n", totalSpent));
+        summary.append(String.format("Average Spending per Customer: $%.2f\n", 
             customers.size() > 0 ? totalSpent / customers.size() : 0));
-        summary.append(String.format("Total Loyalty Points: %d\\n", totalLoyaltyPoints));
-        summary.append(String.format("Average Loyalty Points: %.1f\\n", 
+        summary.append(String.format("Total Loyalty Points: %d\n", totalLoyaltyPoints));
+        summary.append(String.format("Average Loyalty Points: %.1f\n", 
             customers.size() > 0 ? (double) totalLoyaltyPoints / customers.size() : 0));
         
         summaryArea.setText(summary.toString());
@@ -536,23 +534,23 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("VIP MEMBER REPORT\\n");
-        summary.append("=================\\n\\n");
-        summary.append(String.format("Total VIP Members: %d\\n", vipMembers.size()));
-        summary.append(String.format("Active VIP Members: %d\\n", goldMembers + platinumMembers + diamondMembers));
-        summary.append("\\nMembership Level Breakdown:\\n");
-        summary.append(String.format("- Gold Members: %d\\n", goldMembers));
-        summary.append(String.format("- Platinum Members: %d\\n", platinumMembers));
-        summary.append(String.format("- Diamond Members: %d\\n", diamondMembers));
-        summary.append(String.format("\\nTotal VIP Spending: $%.2f\\n", totalVIPSpending));
-        summary.append(String.format("Average VIP Spending: $%.2f\\n", 
+        summary.append("VIP MEMBER REPORT\n");
+        summary.append("=================\n\n");
+        summary.append(String.format("Total VIP Members: %d\n", vipMembers.size()));
+        summary.append(String.format("Active VIP Members: %d\n", goldMembers + platinumMembers + diamondMembers));
+        summary.append("\nMembership Level Breakdown:\n");
+        summary.append(String.format("- Gold Members: %d\n", goldMembers));
+        summary.append(String.format("- Platinum Members: %d\n", platinumMembers));
+        summary.append(String.format("- Diamond Members: %d\n", diamondMembers));
+        summary.append(String.format("\nTotal VIP Spending: $%.2f\n", totalVIPSpending));
+        summary.append(String.format("Average VIP Spending: $%.2f\n", 
             vipMembers.size() > 0 ? totalVIPSpending / vipMembers.size() : 0));
         
         summaryArea.setText(summary.toString());
     }
     
     private void generateRoomUtilizationReport(Date startDate, Date endDate) throws Exception {
-        List<Object[]> utilizationStats = hotelService.getRoomUtilizationStats(startDate, endDate);
+        Map<RoomType, Double> utilizationStats = hotelService.getRoomUtilizationStats(startDate, endDate);
         
         // Set up table columns
         String[] columns = {"Room Type", "Total Rooms", "Occupied Days", "Available Days", "Utilization %"};
@@ -561,28 +559,34 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         double totalUtilization = 0.0;
         int roomTypeCount = 0;
         
-        for (Object[] stat : utilizationStats) {
-            tableModel.addRow(stat);
-            if (stat.length > 4 && stat[4] != null) {
-                try {
-                    double utilization = Double.parseDouble(stat[4].toString().replace("%", ""));
-                    totalUtilization += utilization;
-                    roomTypeCount++;
-                } catch (NumberFormatException e) {
-                    // Ignore parsing errors
-                }
+        for (Map.Entry<RoomType, Double> entry : utilizationStats.entrySet()) {
+            RoomType roomType = entry.getKey();
+            Double utilization = entry.getValue();
+            
+            Object[] row = {
+                roomType.getTypeName(),
+                "N/A", // Total rooms not available in this data
+                "N/A", // Occupied days not available in this data
+                "N/A", // Available days not available in this data
+                String.format("%.1f%%", utilization != null ? utilization : 0.0)
+            };
+            tableModel.addRow(row);
+            
+            if (utilization != null) {
+                totalUtilization += utilization;
+                roomTypeCount++;
             }
         }
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("ROOM UTILIZATION REPORT\\n");
-        summary.append("=======================\\n\\n");
-        summary.append(String.format("Report Period: %s to %s\\n", 
+        summary.append("ROOM UTILIZATION REPORT\n");
+        summary.append("=======================\n\n");
+        summary.append(String.format("Report Period: %s to %s\n", 
             new SimpleDateFormat("MMM dd, yyyy").format(startDate),
             new SimpleDateFormat("MMM dd, yyyy").format(endDate)));
-        summary.append(String.format("Room Types Analyzed: %d\\n", roomTypeCount));
-        summary.append(String.format("Average Utilization: %.1f%%\\n", 
+        summary.append(String.format("Room Types Analyzed: %d\n", roomTypeCount));
+        summary.append(String.format("Average Utilization: %.1f%%\n", 
             roomTypeCount > 0 ? totalUtilization / roomTypeCount : 0));
         
         summaryArea.setText(summary.toString());
@@ -623,14 +627,14 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("OCCUPANCY TRENDS REPORT\\n");
-        summary.append("=======================\\n\\n");
-        summary.append(String.format("Report Period: %s to %s\\n", 
+        summary.append("OCCUPANCY TRENDS REPORT\n");
+        summary.append("=======================\n\n");
+        summary.append(String.format("Report Period: %s to %s\n", 
             new SimpleDateFormat("MMM dd, yyyy").format(startDate),
             new SimpleDateFormat("MMM dd, yyyy").format(endDate)));
-        summary.append(String.format("Current Occupancy Rate: %.1f%%\\n", occupancyRate));
-        summary.append(String.format("Available Rooms: %d out of %d\\n", available, totalRooms));
-        summary.append(String.format("Occupied Rooms: %d out of %d\\n", occupied, totalRooms));
+        summary.append(String.format("Current Occupancy Rate: %.1f%%\n", occupancyRate));
+        summary.append(String.format("Available Rooms: %d out of %d\n", available, totalRooms));
+        summary.append(String.format("Occupied Rooms: %d out of %d\n", occupied, totalRooms));
         
         summaryArea.setText(summary.toString());
     }
@@ -667,16 +671,16 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Generate summary
         StringBuilder summary = new StringBuilder();
-        summary.append("VIP ELIGIBLE CUSTOMERS REPORT\\n");
-        summary.append("=============================\\n\\n");
-        summary.append(String.format("Eligible Customers: %d\\n", eligibleCustomers.size()));
-        summary.append(String.format("Total Eligible Spending: $%.2f\\n", totalEligibleSpending));
-        summary.append(String.format("Average Eligible Spending: $%.2f\\n", 
+        summary.append("VIP ELIGIBLE CUSTOMERS REPORT\n");
+        summary.append("=============================\n\n");
+        summary.append(String.format("Eligible Customers: %d\n", eligibleCustomers.size()));
+        summary.append(String.format("Total Eligible Spending: $%.2f\n", totalEligibleSpending));
+        summary.append(String.format("Average Eligible Spending: $%.2f\n", 
             eligibleCustomers.size() > 0 ? totalEligibleSpending / eligibleCustomers.size() : 0));
-        summary.append("\\nRecommended Actions:\\n");
-        summary.append("- Contact eligible customers for VIP promotion\\n");
-        summary.append("- Offer personalized VIP benefits\\n");
-        summary.append("- Schedule VIP enrollment campaigns\\n");
+        summary.append("\nRecommended Actions:\n");
+        summary.append("- Contact eligible customers for VIP promotion\n");
+        summary.append("- Offer personalized VIP benefits\n");
+        summary.append("- Schedule VIP enrollment campaigns\n");
         
         summaryArea.setText(summary.toString());
     }
@@ -764,7 +768,7 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
             int totalBookings = monthlyBookings.size();
             
             for (Booking booking : monthlyBookings) {
-                if (booking.getBookingStatus() == Booking.BookingStatus.CHECKED_OUT) {
+                if ("CHECKED_OUT".equals(booking.getBookingStatus())) {
                     totalRevenue += booking.getTotalAmount();
                     
                     // Check if customer is VIP

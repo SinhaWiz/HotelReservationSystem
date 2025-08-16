@@ -349,6 +349,58 @@ public class InvoiceDAO {
         return 0.0;
     }
     
+    // Find invoice by number
+    public Invoice findByNumber(String invoiceNumber) throws SQLException {
+        String sql = "SELECT * FROM invoices WHERE invoice_number = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, invoiceNumber);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToInvoice(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    // Find pending invoices
+    public List<Invoice> findPending() throws SQLException {
+        String sql = "SELECT * FROM invoices WHERE payment_status = 'PENDING'";
+        List<Invoice> pendingInvoices = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                pendingInvoices.add(mapResultSetToInvoice(rs));
+            }
+        }
+        return pendingInvoices;
+    }
+
+    // Update invoice payment
+    public void updatePayment(long invoiceId, Invoice.PaymentStatus status,
+                            Date paymentDate, String paymentMethod) throws SQLException {
+        String sql = "UPDATE invoices SET payment_status = ?, payment_date = ?, " +
+                    "payment_method = ? WHERE invoice_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, status.name());
+            pstmt.setDate(2, new java.sql.Date(paymentDate.getTime()));
+            pstmt.setString(3, paymentMethod);
+            pstmt.setLong(4, invoiceId);
+
+            pstmt.executeUpdate();
+        }
+    }
+
     // Helper method to map ResultSet to Invoice object
     private Invoice mapResultSetToInvoice(ResultSet rs) throws SQLException {
         Invoice invoice = new Invoice();
@@ -393,5 +445,39 @@ public class InvoiceDAO {
         
         return lineItem;
     }
-}
 
+    public Invoice generate(long bookingId, double taxRate, String createdBy) throws SQLException {
+        String sql = "{CALL generate_invoice(?, ?, ?, ?, ?, ?, ?)}";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             CallableStatement stmt = conn.prepareCall(sql)) {
+
+            stmt.setLong(1, bookingId);
+            stmt.setDouble(2, taxRate);
+            stmt.setString(3, createdBy);
+            stmt.registerOutParameter(4, Types.NUMERIC); // invoice_id
+            stmt.registerOutParameter(5, Types.VARCHAR); // invoice_number
+            stmt.registerOutParameter(6, Types.NUMERIC); // success
+            stmt.registerOutParameter(7, Types.VARCHAR); // message
+
+            stmt.execute();
+
+            int success = stmt.getInt(6);
+            String message = stmt.getString(7);
+
+            if (success == 1) {
+                long invoiceId = stmt.getLong(4);
+                String invoiceNumber = stmt.getString(5);
+
+                // Retrieve the generated invoice
+                Invoice invoice = findById(invoiceId);
+                if (invoice != null) {
+                    invoice.setInvoiceNumber(invoiceNumber);
+                }
+                return invoice;
+            } else {
+                throw new SQLException("Failed to generate invoice: " + message);
+            }
+        }
+    }
+}

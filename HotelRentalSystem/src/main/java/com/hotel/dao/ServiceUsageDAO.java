@@ -1,10 +1,12 @@
 package com.hotel.dao;
 
 import com.hotel.model.ServiceUsage;
+import com.hotel.model.RoomService;
 import com.hotel.util.DatabaseConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -40,6 +42,11 @@ public class ServiceUsageDAO {
         }
     }
     
+    // Create service usage (alias for addServiceUsage)
+    public long create(long bookingId, int customerId, int serviceId, int quantity) throws SQLException {
+        return addServiceUsage(bookingId, customerId, serviceId, quantity);
+    }
+
     // Find service usage by ID
     public ServiceUsage findById(long usageId) throws SQLException {
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
@@ -225,8 +232,8 @@ public class ServiceUsageDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setDate(1, startDate);
-            stmt.setDate(2, endDate);
+            stmt.setDate(1, new java.sql.Date(startDate.getTime()));
+            stmt.setDate(2, new java.sql.Date(endDate.getTime()));
             
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
@@ -272,6 +279,64 @@ public class ServiceUsageDAO {
         return popularServices;
     }
     
+    // Find service usage by customer ID and date
+    public List<ServiceUsage> findByCustomerIdAndDate(int customerId, Date date) throws SQLException {
+        String sql = "SELECT su.*, rs.* FROM service_usage su " +
+                    "JOIN room_services rs ON su.service_id = rs.service_id " +
+                    "WHERE su.customer_id = ? AND DATE(su.usage_date) = DATE(?)";
+
+        List<ServiceUsage> usages = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, customerId);
+            pstmt.setDate(2, new java.sql.Date(date.getTime()));
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ServiceUsage usage = mapResultSetToServiceUsage(rs);
+                    RoomService service = new RoomService();
+                    service.setServiceId(rs.getInt("service_id"));
+                    service.setServiceName(rs.getString("service_name"));
+                    service.setBasePrice(rs.getDouble("price"));
+                    usage.setRoomService(service);
+                    usages.add(usage);
+                }
+            }
+        }
+        return usages;
+    }
+
+    // Find most popular services
+    public List<ServiceUsage> findMostPopular(int limit) throws SQLException {
+        String sql = "SELECT su.*, rs.*, COUNT(*) as usage_count " +
+                    "FROM service_usage su " +
+                    "JOIN room_services rs ON su.service_id = rs.service_id " +
+                    "GROUP BY su.service_id, rs.service_name, rs.price " +
+                    "ORDER BY usage_count DESC " +
+                    "LIMIT ?";
+
+        List<ServiceUsage> usages = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, limit);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    ServiceUsage usage = mapResultSetToServiceUsage(rs);
+                    RoomService service = new RoomService();
+                    service.setServiceId(rs.getInt("service_id"));
+                    service.setServiceName(rs.getString("service_name"));
+                    service.setBasePrice(rs.getDouble("price"));
+                    usage.setRoomService(service);
+                    usages.add(usage);
+                }
+            }
+        }
+        return usages;
+    }
+
     // Helper method to map ResultSet to ServiceUsage object
     private ServiceUsage mapResultSetToServiceUsage(ResultSet rs) throws SQLException {
         ServiceUsage usage = new ServiceUsage();
@@ -288,4 +353,3 @@ public class ServiceUsageDAO {
         return usage;
     }
 }
-

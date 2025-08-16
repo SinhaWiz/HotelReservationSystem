@@ -1,26 +1,23 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
 import com.hotel.model.*;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Calendar;
 
 /**
  * Panel for managing hotel bookings
  */
 public class BookingManagementPanel extends JPanel implements RefreshablePanel {
     
-    private HotelManagementService hotelService;
-    
+    private EnhancedHotelManagementService hotelService;
+
     // Table components
     private JTable bookingsTable;
     private DefaultTableModel tableModel;
@@ -52,7 +49,7 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         "Payment Status", "Special Requests"
     };
     
-    public BookingManagementPanel(HotelManagementService hotelService) {
+    public BookingManagementPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
         initializeComponents();
         layoutComponents();
@@ -603,4 +600,3 @@ class BookingDetailsDialog extends JDialog {
         panel.add(new JLabel(value != null ? value : "N/A"), gbc);
     }
 }
-

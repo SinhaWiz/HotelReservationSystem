@@ -2,6 +2,7 @@ package com.hotel.view;
 
 import com.hotel.model.EnhancedHotelManagementService;
 import com.hotel.util.DatabaseConnection;
+import com.hotel.view.panels.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 
 /**
  * Main application window for Hotel Management System
@@ -66,7 +68,7 @@ public class HotelManagementApp extends JFrame {
         
         // Set look and feel
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeel());
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             System.err.println("Could not set look and feel: " + e.getMessage());
         }
@@ -379,12 +381,5 @@ public class HotelManagementApp extends JFrame {
             }
         });
     }
-}
-
-/**
- * Interface for panels that can be refreshed
- */
-interface RefreshablePanel {
-    void refreshData();
 }
 

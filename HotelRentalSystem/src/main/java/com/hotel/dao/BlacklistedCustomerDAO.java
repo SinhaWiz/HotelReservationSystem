@@ -301,6 +301,47 @@ public class BlacklistedCustomerDAO {
         return statistics;
     }
     
+    // Create a new blacklist record
+    public void create(int customerId, String reason, String blacklistedBy, Date expiryDate) throws SQLException {
+        blacklistCustomer(customerId, reason, blacklistedBy, expiryDate);
+    }
+
+    // Remove a customer from the blacklist (soft delete)
+    public void remove(int customerId, String removedBy) throws SQLException {
+        String sql = "UPDATE blacklisted_customers SET is_active = 'N', removed_by = ?, " +
+                    "removed_date = SYSDATE WHERE customer_id = ? AND is_active = 'Y'";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, removedBy);
+            pstmt.setInt(2, customerId);
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    // Find all blacklisted customers (active only)
+    public List<BlacklistedCustomer> findAll() throws SQLException {
+        String sql = "SELECT b.*, c.first_name, c.last_name, c.email, c.phone " +
+                    "FROM blacklisted_customers b " +
+                    "JOIN customers c ON b.customer_id = c.customer_id " +
+                    "WHERE b.is_active = 'Y'";
+        List<BlacklistedCustomer> blacklistedCustomers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                BlacklistedCustomer customer = mapResultSetToBlacklistedCustomer(rs);
+                customer.setCustomerEmail(rs.getString("email"));
+                blacklistedCustomers.add(customer);
+            }
+        }
+        return blacklistedCustomers;
+    }
+
     // Helper method to map ResultSet to BlacklistedCustomer object
     private BlacklistedCustomer mapResultSetToBlacklistedCustomer(ResultSet rs) throws SQLException {
         BlacklistedCustomer blacklistedCustomer = new BlacklistedCustomer();

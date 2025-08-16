@@ -1,14 +1,13 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
-import com.hotel.model.*;
+import com.hotel.model.EnhancedHotelManagementService;
+import com.hotel.model.VIPMember;
+import com.hotel.model.Customer;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -16,10 +15,10 @@ import java.util.List;
 /**
  * Panel for managing VIP members
  */
-public class VIPMemberPanel extends JPanel implements RefreshablePanel {
-    
-    private HotelManagementService hotelService;
-    
+public class VIPMemberPanel extends JPanel {
+
+    private final EnhancedHotelManagementService hotelService;
+
     // Table components
     private JTable vipMembersTable;
     private DefaultTableModel tableModel;
@@ -49,7 +48,7 @@ public class VIPMemberPanel extends JPanel implements RefreshablePanel {
         "Discount %", "Total Spent", "Loyalty Points", "Start Date", "End Date", "Status"
     };
     
-    public VIPMemberPanel(HotelManagementService hotelService) {
+    public VIPMemberPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
         initializeComponents();
         layoutComponents();
@@ -370,44 +369,46 @@ public class VIPMemberPanel extends JPanel implements RefreshablePanel {
                 progressDialog.setLocationRelativeTo(this);
                 progressDialog.add(new JLabel("Processing VIP renewals, please wait...", JLabel.CENTER));
                 
-                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-                    @Override
-                    protected Void doInBackground() throws Exception {
-                        hotelService.processVIPRenewals();
-                        return null;
-                    }
-                    
-                    @Override
-                    protected void done() {
-                        progressDialog.dispose();
-                        try {
-                            get(); // Check for exceptions
-                            JOptionPane.showMessageDialog(VIPMemberPanel.this, 
-                                "VIP renewals processed successfully!",
-                                "Renewals Complete", 
-                                JOptionPane.INFORMATION_MESSAGE);
-                            refreshData();
-                        } catch (Exception e) {
-                            JOptionPane.showMessageDialog(VIPMemberPanel.this, 
-                                "Error processing VIP renewals: " + e.getCause().getMessage(),
-                                "Renewal Error", 
-                                JOptionPane.ERROR_MESSAGE);
-                        }
-                    }
-                };
-                
-                worker.execute();
+                createRenewalWorker(progressDialog).execute();
                 progressDialog.setVisible(true);
-                
+
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, 
+                JOptionPane.showMessageDialog(this,
                     "Error starting VIP renewal process: " + e.getMessage(),
-                    "Renewal Error", 
+                    "Renewal Error",
                     JOptionPane.ERROR_MESSAGE);
             }
         }
     }
-    
+
+    private SwingWorker<Void, Void> createRenewalWorker(JDialog progressDialog) {
+        return new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                hotelService.processVIPRenewals();
+                return null;
+            }
+
+            @Override
+            protected void done() {
+                progressDialog.dispose();
+                try {
+                    get(); // Check for exceptions
+                    JOptionPane.showMessageDialog(VIPMemberPanel.this,
+                        "VIP renewals processed successfully!",
+                        "Renewals Complete",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    refreshData();
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(VIPMemberPanel.this,
+                        "Error processing VIP renewals: " + e.getCause().getMessage(),
+                        "Renewal Error",
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+    }
+
     private void updateButtonStates() {
         boolean hasSelection = vipMembersTable.getSelectedRow() != -1;
         viewDetailsButton.setEnabled(hasSelection);
@@ -415,7 +416,7 @@ public class VIPMemberPanel extends JPanel implements RefreshablePanel {
         deactivateButton.setEnabled(hasSelection);
     }
     
-    @Override
+
     public void refreshData() {
         SwingUtilities.invokeLater(() -> {
             try {
@@ -491,8 +492,8 @@ public class VIPMemberPanel extends JPanel implements RefreshablePanel {
  * Dialog for updating VIP member information
  */
 class VIPMemberUpdateDialog extends JDialog {
-    private HotelManagementService hotelService;
-    private int vipId;
+    private final EnhancedHotelManagementService hotelService;
+    private final int vipId;
     private boolean memberUpdated = false;
     
     private JComboBox<String> levelCombo;
@@ -500,7 +501,7 @@ class VIPMemberUpdateDialog extends JDialog {
     private JTextField endDateField;
     private JTextArea benefitsArea;
     
-    public VIPMemberUpdateDialog(JFrame parent, HotelManagementService hotelService, 
+    public VIPMemberUpdateDialog(JFrame parent, EnhancedHotelManagementService hotelService,
                                int vipId, String memberName) {
         super(parent, "Update VIP Member - " + memberName, true);
         this.hotelService = hotelService;
@@ -583,10 +584,16 @@ class VIPMemberUpdateDialog extends JDialog {
     
     private void updateMember() {
         try {
+            String selectedLevel = (String) levelCombo.getSelectedItem();
+            if (selectedLevel == null) {
+                JOptionPane.showMessageDialog(this, "Please select a membership level.");
+                return;
+            }
+
             // Create VIPMember object with updated values
             VIPMember vipMember = new VIPMember();
             vipMember.setVipId(vipId);
-            vipMember.setMembershipLevelFromString((String) levelCombo.getSelectedItem());
+            vipMember.setMembershipLevelFromString(selectedLevel);
             vipMember.setDiscountPercentage(Double.parseDouble(discountField.getText().trim()));
             vipMember.setBenefits(benefitsArea.getText().trim());
             
@@ -597,15 +604,11 @@ class VIPMemberUpdateDialog extends JDialog {
                 vipMember.setMembershipEndDate(endDate);
             }
             
-            boolean success = hotelService.updateVIPMember(vipMember);
-            if (success) {
-                memberUpdated = true;
-                JOptionPane.showMessageDialog(this, "VIP member updated successfully!");
-                dispose();
-            } else {
-                JOptionPane.showMessageDialog(this, "Failed to update VIP member.");
-            }
-            
+            hotelService.updateVIPMember(vipMember);
+            memberUpdated = true;
+            JOptionPane.showMessageDialog(this, "VIP member updated successfully!");
+            dispose();
+
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, 
                 "Error updating VIP member: " + e.getMessage(),
@@ -623,14 +626,12 @@ class VIPMemberUpdateDialog extends JDialog {
  * Dialog for displaying detailed VIP member information
  */
 class VIPMemberDetailsDialog extends JDialog {
-    private VIPMember vipMember;
-    private HotelManagementService hotelService;
-    
-    public VIPMemberDetailsDialog(JFrame parent, VIPMember vipMember, HotelManagementService hotelService) {
-        super(parent, "VIP Member Details - " + 
+    private final VIPMember vipMember;
+
+    public VIPMemberDetailsDialog(JFrame parent, VIPMember vipMember, EnhancedHotelManagementService hotelService) {
+        super(parent, "VIP Member Details - " +
               (vipMember.getCustomer() != null ? vipMember.getCustomer().getFullName() : "Unknown"), true);
         this.vipMember = vipMember;
-        this.hotelService = hotelService;
         initializeDialog();
     }
     
@@ -649,7 +650,8 @@ class VIPMemberDetailsDialog extends JDialog {
         
         int row = 0;
         
-        // VIP Information
+        // VIP Information section
+        addSection(detailsPanel, gbc, row++, "VIP Information");
         addDetailRow(detailsPanel, gbc, row++, "VIP ID:", String.valueOf(vipMember.getVipId()));
         addDetailRow(detailsPanel, gbc, row++, "Membership Level:", vipMember.getMembershipLevelString());
         addDetailRow(detailsPanel, gbc, row++, "Discount Percentage:", vipMember.getFormattedDiscountPercentage());
@@ -665,10 +667,10 @@ class VIPMemberDetailsDialog extends JDialog {
             addDetailRow(detailsPanel, gbc, row++, "End Date:", "Lifetime");
         }
         
-        // Customer Information
+        // Customer Information section
         if (vipMember.getCustomer() != null) {
             Customer customer = vipMember.getCustomer();
-            addSectionHeader(detailsPanel, gbc, row++, "Customer Information");
+            addSection(detailsPanel, gbc, row++, "Customer Information");
             addDetailRow(detailsPanel, gbc, row++, "Name:", customer.getFullName());
             addDetailRow(detailsPanel, gbc, row++, "Email:", customer.getEmail());
             addDetailRow(detailsPanel, gbc, row++, "Phone:", customer.getPhone());
@@ -676,10 +678,10 @@ class VIPMemberDetailsDialog extends JDialog {
             addDetailRow(detailsPanel, gbc, row++, "Loyalty Points:", String.valueOf(customer.getLoyaltyPoints()));
         }
         
-        // Benefits
+        // Benefits section
         if (vipMember.getBenefits() != null && !vipMember.getBenefits().trim().isEmpty()) {
-            addSectionHeader(detailsPanel, gbc, row++, "VIP Benefits");
-            gbc.gridx = 0; gbc.gridy = row++; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH;
+            addSection(detailsPanel, gbc, row++, "VIP Benefits");
+            gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2; gbc.fill = GridBagConstraints.BOTH;
             JTextArea benefitsArea = new JTextArea(vipMember.getBenefits(), 4, 30);
             benefitsArea.setEditable(false);
             benefitsArea.setBackground(getBackground());
@@ -687,7 +689,7 @@ class VIPMemberDetailsDialog extends JDialog {
             detailsPanel.add(new JScrollPane(benefitsArea), gbc);
             gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
         }
-        
+
         JScrollPane scrollPane = new JScrollPane(detailsPanel);
         add(scrollPane, BorderLayout.CENTER);
         
@@ -699,7 +701,7 @@ class VIPMemberDetailsDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
     }
     
-    private void addSectionHeader(JPanel panel, GridBagConstraints gbc, int row, String header) {
+    private void addSection(JPanel panel, GridBagConstraints gbc, int row, String header) {
         gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
         JLabel headerLabel = new JLabel(header);
         headerLabel.setFont(headerLabel.getFont().deriveFont(Font.BOLD, 14f));
@@ -718,4 +720,3 @@ class VIPMemberDetailsDialog extends JDialog {
         panel.add(new JLabel(value != null ? value : "N/A"), gbc);
     }
 }
-

@@ -15,7 +15,9 @@ public class BlacklistedCustomer {
     private Date expiryDate;
     private boolean isActive;
     private String notes;
-    
+    private String customerEmail;
+    private String customerName;
+
     // Related objects
     private Customer customer;
     
@@ -103,6 +105,28 @@ public class BlacklistedCustomer {
         this.notes = notes;
     }
     
+    public String getCustomerEmail() {
+        if (customerEmail != null) {
+            return customerEmail;
+        }
+        return customer != null ? customer.getEmail() : "";
+    }
+
+    public void setCustomerEmail(String customerEmail) {
+        this.customerEmail = customerEmail;
+    }
+
+    public String getCustomerName() {
+        if (customerName != null) {
+            return customerName;
+        }
+        return customer != null ? customer.getFullName() : "Unknown Customer";
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
     public Customer getCustomer() {
         return customer;
     }
@@ -140,10 +164,6 @@ public class BlacklistedCustomer {
         } else {
             return "Active";
         }
-    }
-    
-    public String getCustomerName() {
-        return customer != null ? customer.getFullName() : "Unknown Customer";
     }
     
     public String getBlacklistType() {
@@ -197,4 +217,3 @@ public class BlacklistedCustomer {
         return Integer.hashCode(blacklistId);
     }
 }
-
