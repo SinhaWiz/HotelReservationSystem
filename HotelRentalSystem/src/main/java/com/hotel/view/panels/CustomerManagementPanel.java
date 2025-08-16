@@ -523,8 +523,8 @@ class CustomerDialog extends JDialog {
                     lastNameField.getText().trim(),
                     emailField.getText().trim(),
                     phoneField.getText().trim(),
-                    addressArea.getText().trim(),
-                    dateOfBirth
+                    dateOfBirth,
+                    addressArea.getText().trim()
                 );
                 
                 if (newCustomer != null) {

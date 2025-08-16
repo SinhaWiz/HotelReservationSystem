@@ -314,7 +314,7 @@ public class ServiceUsageDAO {
                     "JOIN room_services rs ON su.service_id = rs.service_id " +
                     "GROUP BY su.service_id, rs.service_name, rs.price " +
                     "ORDER BY usage_count DESC " +
-                    "LIMIT ?";
+                    "FETCH ?";
 
         List<ServiceUsage> usages = new ArrayList<>();
         try (Connection conn = DatabaseConnection.getConnection();

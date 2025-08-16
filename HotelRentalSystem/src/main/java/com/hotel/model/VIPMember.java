@@ -50,119 +50,176 @@ public class VIPMember {
         this.benefits = benefits;
         this.isActive = isActive;
     }
-    
-    // Getters and Setters
-    public int getVipId() { return vipId; }
-    public void setVipId(int vipId) { this.vipId = vipId; }
-    
-    public int getCustomerId() { return customerId; }
-    public void setCustomerId(int customerId) { this.customerId = customerId; }
-    
-    public Customer getCustomer() { return customer; }
-    public void setCustomer(Customer customer) { this.customer = customer; }
-    
-    public MembershipLevel getMembershipLevel() { return membershipLevel; }
-    public void setMembershipLevel(MembershipLevel membershipLevel) { this.membershipLevel = membershipLevel; }
-    
-    public double getDiscountPercentage() { return discountPercentage; }
-    public void setDiscountPercentage(double discountPercentage) { this.discountPercentage = discountPercentage; }
-    
-    public Date getMembershipStartDate() { return membershipStartDate; }
-    public void setMembershipStartDate(Date membershipStartDate) { this.membershipStartDate = membershipStartDate; }
-    
-    public Date getMembershipEndDate() { return membershipEndDate; }
-    public void setMembershipEndDate(Date membershipEndDate) { this.membershipEndDate = membershipEndDate; }
-    
-    public String getBenefits() { return benefits; }
-    public void setBenefits(String benefits) { this.benefits = benefits; }
-    
-    public boolean isActive() { return isActive; }
-    public void setActive(boolean active) { isActive = active; }
-    
-    public int getBookingCount() { return bookingCount; }
-    public void setBookingCount(int bookingCount) { this.bookingCount = bookingCount; }
 
-    // Utility methods
-    public boolean isExpired() {
-        return membershipEndDate != null && membershipEndDate.before(new Date());
+    // Getters and Setters
+    public int getVipId() {
+        return vipId;
     }
-    
-    public boolean isValidMembership() {
-        return isActive && !isExpired();
+
+    public void setVipId(int vipId) {
+        this.vipId = vipId;
     }
-    
-    public String getMembershipLevelString() {
-        return membershipLevel.toString();
+
+    public int getCustomerId() {
+        return customerId;
     }
-    
-    public void setMembershipLevelFromString(String levelStr) {
-        try {
-            this.membershipLevel = MembershipLevel.valueOf(levelStr.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            this.membershipLevel = MembershipLevel.GOLD;
+
+    public void setCustomerId(int customerId) {
+        this.customerId = customerId;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+    }
+
+    public MembershipLevel getMembershipLevel() {
+        return membershipLevel;
+    }
+
+    public void setMembershipLevel(MembershipLevel membershipLevel) {
+        this.membershipLevel = membershipLevel;
+        // Update discount percentage based on level
+        switch (membershipLevel) {
+            case GOLD:
+                this.discountPercentage = 10.0;
+                break;
+            case PLATINUM:
+                this.discountPercentage = 15.0;
+                break;
+            case DIAMOND:
+                this.discountPercentage = 20.0;
+                break;
         }
     }
-    
+
+    public String getMembershipLevelString() {
+        return membershipLevel != null ? membershipLevel.toString() : "GOLD";
+    }
+
+    public void setMembershipLevelFromString(String levelString) {
+        if (levelString != null) {
+            try {
+                this.membershipLevel = MembershipLevel.valueOf(levelString.toUpperCase());
+                // Update discount percentage based on level
+                switch (this.membershipLevel) {
+                    case GOLD:
+                        this.discountPercentage = 10.0;
+                        break;
+                    case PLATINUM:
+                        this.discountPercentage = 15.0;
+                        break;
+                    case DIAMOND:
+                        this.discountPercentage = 20.0;
+                        break;
+                }
+            } catch (IllegalArgumentException e) {
+                this.membershipLevel = MembershipLevel.GOLD; // Default fallback
+                this.discountPercentage = 10.0;
+            }
+        }
+    }
+
+    public double getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(double discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
     public String getFormattedDiscountPercentage() {
         return String.format("%.1f%%", discountPercentage);
     }
 
-    public static double getDefaultDiscountForLevel(MembershipLevel level) {
-        switch (level) {
-            case GOLD:
-                return 10.0;
-            case PLATINUM:
-                return 15.0;
-            case DIAMOND:
-                return 20.0;
-            default:
-                return 5.0;
-        }
+    public Date getMembershipStartDate() {
+        return membershipStartDate;
     }
 
-    public static String getDefaultBenefitsForLevel(MembershipLevel level) {
-        switch (level) {
-            case GOLD:
-                return "- 10% discount on room rates\n" +
-                       "- Early check-in when available\n" +
-                       "- Welcome drink";
-            case PLATINUM:
-                return "- 15% discount on room rates\n" +
-                       "- Early check-in and late check-out\n" +
-                       "- Welcome drink and fruit basket\n" +
-                       "- Access to executive lounge";
-            case DIAMOND:
-                return "- 20% discount on room rates\n" +
-                       "- Flexible check-in and check-out\n" +
-                       "- Welcome drink and premium amenities\n" +
-                       "- Access to executive lounge\n" +
-                       "- Free spa treatment once per stay";
-            default:
-                return "Basic VIP benefits";
-        }
+    public void setMembershipStartDate(Date membershipStartDate) {
+        this.membershipStartDate = membershipStartDate;
+    }
+
+    // Add missing setter methods
+    public void setJoinDate(Date joinDate) {
+        this.membershipStartDate = joinDate;
+    }
+
+    public void setUpgradeDate(Date upgradeDate) {
+        // For upgrade tracking - could be stored separately if needed
+        this.membershipStartDate = upgradeDate;
+    }
+
+    public Date getMembershipEndDate() {
+        return membershipEndDate;
+    }
+
+    public void setMembershipEndDate(Date membershipEndDate) {
+        this.membershipEndDate = membershipEndDate;
+    }
+
+    public String getBenefits() {
+        return benefits != null ? benefits : "";
+    }
+
+    public void setBenefits(String benefits) {
+        this.benefits = benefits;
+    }
+
+    public void setSpecialRequests(String specialRequests) {
+        this.benefits = specialRequests; // Using benefits field for special requests
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setActive(boolean active) {
+        isActive = active;
+    }
+
+    public int getBookingCount() {
+        return bookingCount;
+    }
+
+    public void setBookingCount(int bookingCount) {
+        this.bookingCount = bookingCount;
+    }
+
+    // Add missing setter for total spent (could be tracked separately)
+    private double totalSpent = 0.0;
+
+    public double getTotalSpent() {
+        return totalSpent;
+    }
+
+    public void setTotalSpent(double totalSpent) {
+        this.totalSpent = totalSpent;
+    }
+
+    // Utility methods
+    public boolean isValidMembership() {
+        if (!isActive) return false;
+        if (membershipEndDate == null) return true;
+        return membershipEndDate.after(new java.util.Date());
+    }
+
+    public String getStatusString() {
+        return isValidMembership() ? "Active" : "Inactive";
+    }
+
+    public long getDaysSinceJoining() {
+        if (membershipStartDate == null) return 0;
+        long diff = new java.util.Date().getTime() - membershipStartDate.getTime();
+        return diff / (24 * 60 * 60 * 1000);
     }
 
     @Override
     public String toString() {
-        return "VIPMember{" +
-                "vipId=" + vipId +
-                ", customerId=" + customerId +
-                ", membershipLevel=" + membershipLevel +
-                ", discountPercentage=" + discountPercentage +
-                ", isActive=" + isActive +
-                '}';
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        VIPMember vipMember = (VIPMember) obj;
-        return vipId == vipMember.vipId;
-    }
-
-    @Override
-    public int hashCode() {
-        return Integer.hashCode(vipId);
+        return String.format("VIPMember{vipId=%d, customerId=%d, level=%s, discount=%.1f%%, active=%s}",
+                vipId, customerId, membershipLevel, discountPercentage, isActive);
     }
 }
