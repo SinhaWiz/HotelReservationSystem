@@ -224,5 +224,12 @@ public class ServiceUsage {
     public int hashCode() {
         return Long.hashCode(usageId);
     }
-}
 
+    public RoomService getService() {
+        return this.roomService;
+    }
+
+    public void setService(RoomService service) {
+        this.roomService = service;
+    }
+}

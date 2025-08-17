@@ -1,25 +1,25 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
+import com.hotel.model.Booking;
+import com.hotel.model.EnhancedHotelManagementService;
+
 import com.hotel.model.Customer;
+import com.hotel.model.VIPMember;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.Calendar;
 
 /**
  * Panel for managing hotel customers
  */
 public class CustomerManagementPanel extends JPanel implements RefreshablePanel {
     
-    private HotelManagementService hotelService;
+    private EnhancedHotelManagementService hotelService;
     
     // Table components
     private JTable customersTable;
@@ -44,7 +44,7 @@ public class CustomerManagementPanel extends JPanel implements RefreshablePanel 
         "Total Spent", "Loyalty Points", "Registration Date", "VIP Status"
     };
     
-    public CustomerManagementPanel(HotelManagementService hotelService) {
+    public CustomerManagementPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
         initializeComponents();
         layoutComponents();
@@ -381,7 +381,7 @@ public class CustomerManagementPanel extends JPanel implements RefreshablePanel 
  * Dialog for adding/editing customers
  */
 class CustomerDialog extends JDialog {
-    private HotelManagementService hotelService;
+    private EnhancedHotelManagementService hotelService;
     private Customer customer;
     private boolean customerSaved = false;
     
@@ -392,7 +392,7 @@ class CustomerDialog extends JDialog {
     private JTextArea addressArea;
     private JTextField dobField;
     
-    public CustomerDialog(JFrame parent, HotelManagementService hotelService, Customer customer) {
+    public CustomerDialog(JFrame parent, EnhancedHotelManagementService hotelService, Customer customer) {
         super(parent, customer == null ? "Add Customer" : "Edit Customer", true);
         this.hotelService = hotelService;
         this.customer = customer;
@@ -523,8 +523,8 @@ class CustomerDialog extends JDialog {
                     lastNameField.getText().trim(),
                     emailField.getText().trim(),
                     phoneField.getText().trim(),
-                    addressArea.getText().trim(),
-                    dateOfBirth
+                    dateOfBirth,
+                    addressArea.getText().trim()
                 );
                 
                 if (newCustomer != null) {
@@ -569,9 +569,9 @@ class CustomerDialog extends JDialog {
  */
 class CustomerDetailsDialog extends JDialog {
     private Customer customer;
-    private HotelManagementService hotelService;
+    private EnhancedHotelManagementService hotelService;
     
-    public CustomerDetailsDialog(JFrame parent, Customer customer, HotelManagementService hotelService) {
+    public CustomerDetailsDialog(JFrame parent, Customer customer, EnhancedHotelManagementService hotelService) {
         super(parent, "Customer Details - " + customer.getFullName(), true);
         this.customer = customer;
         this.hotelService = hotelService;

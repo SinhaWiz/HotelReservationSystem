@@ -1,13 +1,11 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
+import com.hotel.model.EnhancedHotelManagementService;
 import com.hotel.model.*;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -18,7 +16,7 @@ import java.util.Calendar;
  */
 public class DashboardPanel extends JPanel implements RefreshablePanel {
     
-    private HotelManagementService hotelService;
+    private EnhancedHotelManagementService hotelService;
     
     // Statistics labels
     private JLabel totalCustomersLabel;
@@ -39,7 +37,7 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
     private JTextArea recentActivityArea;
     private JScrollPane activityScrollPane;
     
-    public DashboardPanel(HotelManagementService hotelService) {
+    public DashboardPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
         initializeComponents();
         layoutComponents();
@@ -291,12 +289,14 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
                 totalVIPMembersLabel.setText(String.valueOf(stats[1]));
                 totalRoomsLabel.setText(String.valueOf(stats[2]));
                 availableRoomsLabel.setText(String.valueOf(stats[3]));
-                occupiedRoomsLabel.setText(String.valueOf(stats[4]));
-                currentReservationsLabel.setText(String.valueOf(stats[5]));
+                currentReservationsLabel.setText(String.valueOf(stats[4]));
                 
-                // Calculate occupancy rate
+                // Calculate occupied rooms and occupancy rate
                 int totalRooms = (Integer) stats[2];
-                int occupiedRooms = (Integer) stats[4];
+                int availableRooms = (Integer) stats[3];
+                int occupiedRooms = totalRooms - availableRooms;
+                occupiedRoomsLabel.setText(String.valueOf(occupiedRooms));
+                
                 double occupancyRate = totalRooms > 0 ? (double) occupiedRooms / totalRooms * 100 : 0;
                 occupancyRateLabel.setText(String.format("%.1f%%", occupancyRate));
                 
@@ -315,37 +315,37 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
     private void updateRecentActivity() {
         try {
             StringBuilder activity = new StringBuilder();
-            activity.append("=== CURRENT RESERVATIONS ===\\n");
+            activity.append("=== CURRENT RESERVATIONS ===\n");
             
             List<Booking> reservations = hotelService.getCurrentReservations();
             
             if (reservations.isEmpty()) {
-                activity.append("No current reservations.\\n");
+                activity.append("No current reservations.\n");
             } else {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy");
                 
                 for (Booking booking : reservations) {
-                    activity.append(String.format("Booking #%d - %s\\n", 
+                    activity.append(String.format("Booking #%d - %s\n", 
                         booking.getBookingId(),
                         booking.getCustomer() != null ? booking.getCustomer().getFullName() : "Unknown Customer"));
                     
-                    activity.append(String.format("  Room: %s | Check-in: %s | Check-out: %s\\n",
+                    activity.append(String.format("  Room: %s | Check-in: %s | Check-out: %s\n",
                         booking.getRoom() != null ? booking.getRoom().getRoomNumber() : "N/A",
                         dateFormat.format(booking.getCheckInDate()),
                         dateFormat.format(booking.getCheckOutDate())));
                     
-                    activity.append(String.format("  Status: %s | Amount: $%.2f\\n",
+                    activity.append(String.format("  Status: %s | Amount: $%.2f\n",
                         booking.getBookingStatusString(),
                         booking.getTotalAmount()));
                     
-                    activity.append("\\n");
+                    activity.append("\n");
                 }
             }
             
-            activity.append("\\n=== SYSTEM STATUS ===\\n");
-            activity.append("Last Updated: ").append(new SimpleDateFormat("HH:mm:ss").format(new Date())).append("\\n");
-            activity.append("Database: Connected\\n");
-            activity.append("System: Online\\n");
+            activity.append("\n=== SYSTEM STATUS ===\n");
+            activity.append("Last Updated: ").append(new SimpleDateFormat("HH:mm:ss").format(new Date())).append("\n");
+            activity.append("Database: Connected\n");
+            activity.append("System: Online\n");
             
             recentActivityArea.setText(activity.toString());
             recentActivityArea.setCaretPosition(0);
@@ -358,7 +358,7 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
     private void addActivity(String message) {
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
         String timestamp = timeFormat.format(new Date());
-        String activityLine = "[" + timestamp + "] " + message + "\\n";
+        String activityLine = "[" + timestamp + "] " + message + "\n";
         
         recentActivityArea.insert(activityLine, 0);
     }
@@ -368,7 +368,7 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
  * Dialog for creating new bookings from dashboard
  */
 class NewBookingDialog extends JDialog {
-    private HotelManagementService hotelService;
+    private EnhancedHotelManagementService hotelService;
     private boolean bookingCreated = false;
     private String customerName = "";
     
@@ -378,7 +378,7 @@ class NewBookingDialog extends JDialog {
     private JTextField checkOutField;
     private JTextArea specialRequestsArea;
     
-    public NewBookingDialog(JFrame parent, HotelManagementService hotelService) {
+    public NewBookingDialog(JFrame parent, EnhancedHotelManagementService hotelService) {
         super(parent, "New Booking", true);
         this.hotelService = hotelService;
         initializeDialog();
@@ -469,15 +469,23 @@ class NewBookingDialog extends JDialog {
             Date checkOutDate = checkOutCal.getTime();
             String specialRequests = specialRequestsArea.getText().trim();
             
-            Booking booking = hotelService.createBooking(customerId, roomId, checkInDate, checkOutDate, specialRequests);
-            
+            Booking booking = new Booking();
+            booking.setCustomerId(customerId);
+            booking.setRoomId(roomId);
+            booking.setCheckInDate(checkInDate);
+            booking.setCheckOutDate(checkOutDate);
+            booking.setSpecialRequests(specialRequests);
+            booking.setBookingStatus("CONFIRMED");
+
+            booking = hotelService.createBooking(booking);
+
             if (booking != null) {
                 bookingCreated = true;
                 if (booking.getCustomer() != null) {
                     customerName = booking.getCustomer().getFullName();
                 }
                 JOptionPane.showMessageDialog(this, 
-                    "Booking created successfully!\\nBooking ID: " + booking.getBookingId(),
+                    "Booking created successfully!\nBooking ID: " + booking.getBookingId(),
                     "Success", 
                     JOptionPane.INFORMATION_MESSAGE);
                 dispose();
@@ -499,4 +507,3 @@ class NewBookingDialog extends JDialog {
         return customerName;
     }
 }
-

@@ -15,7 +15,7 @@ public class CustomerDAO {
     /**
      * Create a new customer
      */
-    public int createCustomer(Customer customer) throws SQLException {
+    public Customer create(Customer customer) throws SQLException {
         String sql = "INSERT INTO customers (customer_id, first_name, last_name, email, phone, " +
                     "address, date_of_birth, total_spent, loyalty_points) " +
                     "VALUES (customer_seq.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -50,12 +50,12 @@ public class CustomerDAO {
                 if (rs.next()) {
                     int customerId = rs.getInt(1);
                     customer.setCustomerId(customerId);
-                    return customerId;
+                    return customer;
                 }
             }
             
-            return 0;
-            
+            return null;
+
         } finally {
             DatabaseConnection.closeResources(conn, pstmt, rs);
         }
@@ -153,7 +153,7 @@ public class CustomerDAO {
     /**
      * Update customer information
      */
-    public boolean updateCustomer(Customer customer) throws SQLException {
+    public void update(Customer customer) throws SQLException {
         String sql = "UPDATE customers SET first_name = ?, last_name = ?, email = ?, " +
                     "phone = ?, address = ?, date_of_birth = ?, total_spent = ?, loyalty_points = ? " +
                     "WHERE customer_id = ?";
@@ -181,9 +181,8 @@ public class CustomerDAO {
             pstmt.setInt(8, customer.getLoyaltyPoints());
             pstmt.setInt(9, customer.getCustomerId());
             
-            int rowsAffected = pstmt.executeUpdate();
-            return rowsAffected > 0;
-            
+            pstmt.executeUpdate();
+
         } finally {
             DatabaseConnection.closeResources(conn, pstmt);
         }
@@ -214,7 +213,7 @@ public class CustomerDAO {
     /**
      * Search customers by name or email
      */
-    public List<Customer> searchCustomers(String searchTerm) throws SQLException {
+    public List<Customer> search(String searchTerm) throws SQLException {
         String sql = "SELECT customer_id, first_name, last_name, email, phone, address, " +
                     "date_of_birth, total_spent, registration_date, is_active, loyalty_points " +
                     "FROM customers WHERE is_active = 'Y' AND " +
@@ -340,5 +339,101 @@ public class CustomerDAO {
         
         return customer;
     }
-}
 
+    /**
+     * Save customer (create or update)
+     */
+    public void save(Customer customer) throws SQLException {
+        if (customer.getCustomerId() == 0) {
+            create(customer);
+        } else {
+            update(customer);
+        }
+    }
+
+    /**
+     * Search customers by name
+     */
+    public List<Customer> searchByName(String searchTerm) throws SQLException {
+        String sql = "SELECT * FROM customers WHERE LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ?";
+        List<Customer> customers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            String searchPattern = "%" + searchTerm.toLowerCase() + "%";
+            pstmt.setString(1, searchPattern);
+            pstmt.setString(2, searchPattern);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    customers.add(mapResultSetToCustomer(rs));
+                }
+            }
+        }
+        return customers;
+    }
+
+    /**
+     * Find customers eligible for VIP membership based on activity
+     */
+    public List<Customer> findVIPEligible() throws SQLException {
+        String sql = "SELECT c.* FROM customers c " +
+                    "JOIN bookings b ON c.customer_id = b.customer_id " +
+                    "GROUP BY c.customer_id, c.first_name, c.last_name, c.email, " +
+                    "c.phone, c.address, c.created_date, c.last_updated " +
+                    "HAVING COUNT(*) >= 5 AND SUM(b.total_amount) >= 5000";
+
+        List<Customer> customers = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                customers.add(mapResultSetToCustomer(rs));
+            }
+        }
+        return customers;
+    }
+
+    // ==================== MISSING METHODS ====================
+
+    /**
+     * Delete customer (hard delete method)
+     */
+    public void delete(int customerId) throws SQLException {
+        String sql = "DELETE FROM customers WHERE customer_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, customerId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Find VIP eligible customers (alternative method signature)
+     */
+    public List<Customer> findVIPEligibleCustomers() throws SQLException {
+        String sql = "SELECT c.customer_id, c.first_name, c.last_name, c.email, c.phone, " +
+                    "c.address, c.date_of_birth, c.total_spent, c.registration_date, " +
+                    "c.is_active, c.loyalty_points " +
+                    "FROM customers c " +
+                    "LEFT JOIN vip_members vm ON c.customer_id = vm.customer_id AND vm.is_active = 'Y' " +
+                    "WHERE c.is_active = 'Y' AND c.total_spent >= 5000 AND vm.customer_id IS NULL " +
+                    "ORDER BY c.total_spent DESC";
+
+        List<Customer> customers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                customers.add(mapResultSetToCustomer(rs));
+            }
+        }
+        return customers;
+    }
+}

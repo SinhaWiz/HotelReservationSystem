@@ -6,7 +6,7 @@ CREATE TABLE room_services (
     service_id          NUMBER(8) PRIMARY KEY,
     service_name        VARCHAR2(100) NOT NULL,
     service_description VARCHAR2(300),
-    service_category    VARCHAR2(50) NOT NULL, -- HOUSEKEEPING, FOOD, LAUNDRY, MAINTENANCE, ENTERTAINMENT
+    service_category    VARCHAR2(50) NOT NULL, -- HOUSEKEEPING, FOOD, LAUNDRY, MAINTENANCE, ENTERTAINMENT, TRANSPORTATION, ACCOMMODATION
     base_price          NUMBER(8,2) NOT NULL,
     is_active           CHAR(1) DEFAULT 'Y',
     created_date        DATE DEFAULT SYSDATE,
@@ -84,7 +84,7 @@ CREATE TABLE invoices (
 CREATE TABLE invoice_line_items (
     line_item_id        NUMBER(12) PRIMARY KEY,
     invoice_id          NUMBER(12) NOT NULL,
-    item_type           VARCHAR2(20) NOT NULL, -- ROOM, SERVICE, TAX, DISCOUNT
+    item_type           VARCHAR2(20) NOT NULL, -- ROOM, SERVICE, TAX, DISCOUNT, EXTRA_CHARGE
     item_description    VARCHAR2(200) NOT NULL,
     quantity            NUMBER(6,2) DEFAULT 1,
     unit_price          NUMBER(10,2) NOT NULL,
@@ -187,23 +187,6 @@ CREATE INDEX idx_invoice_date ON invoices(invoice_date);
 CREATE INDEX idx_maintenance_room ON room_maintenance_log(room_id);
 CREATE INDEX idx_maintenance_status ON room_maintenance_log(maintenance_status);
 
--- Add new columns to existing tables
-ALTER TABLE bookings ADD (
-    actual_checkout_date DATE,
-    late_checkout_hours NUMBER(4,2) DEFAULT 0,
-    services_total NUMBER(10,2) DEFAULT 0
-);
-
-ALTER TABLE customers ADD (
-    blacklist_status CHAR(1) DEFAULT 'N',
-    vip_promotion_eligible CHAR(1) DEFAULT 'N',
-    last_service_date DATE
-);
-
--- Add constraints for new columns
-ALTER TABLE customers ADD CONSTRAINT chk_blacklist_status CHECK (blacklist_status IN ('Y', 'N'));
-ALTER TABLE customers ADD CONSTRAINT chk_vip_eligible CHECK (vip_promotion_eligible IN ('Y', 'N'));
-
 -- Insert sample room services
 INSERT INTO room_services (service_id, service_name, service_description, service_category, base_price) VALUES
 (service_seq.NEXTVAL, 'Room Cleaning', 'Daily housekeeping service', 'HOUSEKEEPING', 25.00);
@@ -279,7 +262,7 @@ SELECT
     r.room_id,
     r.room_number,
     rt.type_name,
-    rt.BASE_PRICE,
+    rt.base_price,
     rt.max_occupancy,
     r.floor_number,
     r.status,
@@ -289,7 +272,7 @@ JOIN room_types rt ON r.type_id = rt.type_id
 LEFT JOIN room_service_assignments rsa ON rt.type_id = rsa.room_type_id
 WHERE r.status = 'AVAILABLE'
 GROUP BY r.room_id, r.room_number, rt.type_name, rt.base_price, rt.max_occupancy,
-         r.floor_number, r.status, rt.BASE_PRICE, r.status
+         r.floor_number, r.status
 ORDER BY r.room_number;
 
 CREATE OR REPLACE VIEW v_expired_reservations AS

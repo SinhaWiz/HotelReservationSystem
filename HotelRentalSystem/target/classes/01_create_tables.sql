@@ -25,6 +25,7 @@ CREATE TABLE room_types (
     base_price NUMBER(10,2) NOT NULL,
     max_occupancy NUMBER(2) NOT NULL,
     amenities VARCHAR2(500),
+    description VARCHAR2(500),
     created_date DATE DEFAULT SYSDATE
 );
 
@@ -34,8 +35,13 @@ CREATE TABLE rooms (
     room_number VARCHAR2(10) NOT NULL UNIQUE,
     type_id NUMBER(10) NOT NULL,
     floor_number NUMBER(3),
-    status VARCHAR2(20) DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED')),
+    status VARCHAR2(20) DEFAULT 'AVAILABLE' CHECK (status IN ('AVAILABLE', 'OCCUPIED', 'MAINTENANCE', 'RESERVED', 'OUT_OF_ORDER')),
     last_maintenance DATE,
+    last_cleaned DATE,
+    amenities VARCHAR2(500),
+    notes VARCHAR2(1000),
+    description VARCHAR2(500),
+    base_price NUMBER(10,2),
     created_date DATE DEFAULT SYSDATE,
     CONSTRAINT fk_room_type FOREIGN KEY (type_id) REFERENCES room_types(type_id)
 );
@@ -52,7 +58,10 @@ CREATE TABLE customers (
     total_spent NUMBER(12,2) DEFAULT 0,
     registration_date DATE DEFAULT SYSDATE,
     is_active CHAR(1) DEFAULT 'Y' CHECK (is_active IN ('Y', 'N')),
-    loyalty_points NUMBER(10) DEFAULT 0
+    loyalty_points NUMBER(10) DEFAULT 0,
+    blacklist_status CHAR(1) DEFAULT 'N' CHECK (blacklist_status IN ('Y', 'N')),
+    vip_promotion_eligible CHAR(1) DEFAULT 'N' CHECK (vip_promotion_eligible IN ('Y', 'N')),
+    last_service_date DATE
 );
 
 -- Create VIP Members table
@@ -65,6 +74,7 @@ CREATE TABLE vip_members (
     membership_end_date DATE,
     benefits VARCHAR2(500),
     is_active CHAR(1) DEFAULT 'Y' CHECK (is_active IN ('Y', 'N')),
+    booking_count NUMBER(10) DEFAULT 0,
     CONSTRAINT fk_vip_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
     CONSTRAINT uk_vip_customer UNIQUE (customer_id)
 );
@@ -78,6 +88,9 @@ CREATE TABLE bookings (
     check_out_date DATE NOT NULL,
     actual_check_in DATE,
     actual_check_out DATE,
+    actual_checkout_date DATE,
+    late_checkout_hours NUMBER(4,2) DEFAULT 0,
+    services_total NUMBER(10,2) DEFAULT 0,
     booking_date DATE DEFAULT SYSDATE,
     total_amount NUMBER(12,2) NOT NULL,
     discount_applied NUMBER(12,2) DEFAULT 0,
@@ -101,6 +114,9 @@ CREATE TABLE booking_archive (
     check_out_date DATE,
     actual_check_in DATE,
     actual_check_out DATE,
+    actual_checkout_date DATE,
+    late_checkout_hours NUMBER(4,2),
+    services_total NUMBER(10,2),
     booking_date DATE,
     total_amount NUMBER(12,2),
     discount_applied NUMBER(12,2),
@@ -138,14 +154,19 @@ CREATE SEQUENCE archive_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE INDEX idx_customer_email ON customers(email);
 CREATE INDEX idx_customer_phone ON customers(phone);
 CREATE INDEX idx_customer_total_spent ON customers(total_spent);
+CREATE INDEX idx_customer_blacklist_status ON customers(blacklist_status);
+CREATE INDEX idx_customer_vip_eligible ON customers(vip_promotion_eligible);
 CREATE INDEX idx_room_status ON rooms(status);
 CREATE INDEX idx_room_type ON rooms(type_id);
+CREATE INDEX idx_room_floor ON rooms(floor_number);
 CREATE INDEX idx_booking_dates ON bookings(check_in_date, check_out_date);
 CREATE INDEX idx_booking_customer ON bookings(customer_id);
 CREATE INDEX idx_booking_room ON bookings(room_id);
 CREATE INDEX idx_booking_status ON bookings(booking_status);
+CREATE INDEX idx_booking_payment_status ON bookings(payment_status);
 CREATE INDEX idx_vip_customer ON vip_members(customer_id);
 CREATE INDEX idx_vip_level ON vip_members(membership_level);
+CREATE INDEX idx_vip_active ON vip_members(is_active);
 CREATE INDEX idx_audit_table ON audit_log(table_name);
 CREATE INDEX idx_audit_date ON audit_log(change_date);
 

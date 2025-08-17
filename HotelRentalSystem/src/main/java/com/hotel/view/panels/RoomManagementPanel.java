@@ -1,32 +1,25 @@
 package com.hotel.view.panels;
 
-import com.hotel.service.HotelManagementService;
-import com.hotel.model.*;
-
+import com.hotel.model.EnhancedHotelManagementService;
+import com.hotel.model.Room;
+import com.hotel.model.RoomType;
+import com.hotel.view.panels.RefreshablePanel;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.*;
 import java.util.List;
-import java.util.Calendar;
 
 /**
  * Panel for managing hotel rooms
  */
 public class RoomManagementPanel extends JPanel implements RefreshablePanel {
-    
-    private HotelManagementService hotelService;
-    
-    // Table components
+    private final EnhancedHotelManagementService hotelService;
     private JTable roomsTable;
     private DefaultTableModel tableModel;
-    private TableRowSorter<DefaultTableModel> tableSorter;
-    private JScrollPane tableScrollPane;
-    
+
     // Filter components
     private JComboBox<String> statusFilterCombo;
     private JComboBox<String> typeFilterCombo;
@@ -51,8 +44,10 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         "Floor", "Status", "Amenities", "Last Cleaned", "Notes"
     };
     
-    public RoomManagementPanel(HotelManagementService hotelService) {
+    public RoomManagementPanel(EnhancedHotelManagementService hotelService) {
         this.hotelService = hotelService;
+        this.roomsTable = new JTable();
+        this.tableModel = new DefaultTableModel();
         initializeComponents();
         layoutComponents();
         setupEventHandlers();
@@ -86,11 +81,8 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         roomsTable.getColumnModel().getColumn(9).setPreferredWidth(150); // Notes
         
         // Table sorter
-        tableSorter = new TableRowSorter<>(tableModel);
+        TableRowSorter<DefaultTableModel> tableSorter = new TableRowSorter<>(tableModel);
         roomsTable.setRowSorter(tableSorter);
-        
-        tableScrollPane = new JScrollPane(roomsTable);
-        tableScrollPane.setPreferredSize(new Dimension(0, 400));
         
         // Filter components
         statusFilterCombo = new JComboBox<>(new String[]{
@@ -146,6 +138,8 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         add(topPanel, BorderLayout.NORTH);
         
         // Center panel - Table
+        JScrollPane tableScrollPane = new JScrollPane(roomsTable);
+        tableScrollPane.setPreferredSize(new Dimension(0, 400));
         add(tableScrollPane, BorderLayout.CENTER);
         
         // Bottom panel - Action buttons
@@ -290,29 +284,29 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         String currentStatus = (String) tableModel.getValueAt(modelRow, 6);
         
         // Show status selection dialog
-        String[] statuses = {"AVAILABLE", "OCCUPIED", "MAINTENANCE", "OUT_OF_ORDER"};
+        Room.RoomStatus[] statuses = Room.RoomStatus.values();
+        String[] statusStrings = new String[statuses.length];
+        for (int i = 0; i < statuses.length; i++) {
+            statusStrings[i] = statuses[i].toString();
+        }
+
         String selectedStatus = (String) JOptionPane.showInputDialog(this,
-            "Select new status for Room " + roomNumber + ":\\nCurrent Status: " + currentStatus,
+            "Select new status for Room " + roomNumber + ":\nCurrent Status: " + currentStatus,
             "Update Room Status",
             JOptionPane.QUESTION_MESSAGE,
             null,
-            statuses,
+            statusStrings,
             currentStatus);
         
         if (selectedStatus != null && !selectedStatus.equals(currentStatus)) {
             try {
-                Room.RoomStatus newStatus = Room.RoomStatus.valueOf(selectedStatus);
-                boolean success = hotelService.updateRoomStatus(roomId, newStatus);
-                
-                if (success) {
-                    JOptionPane.showMessageDialog(this, 
-                        "Room " + roomNumber + " status updated to " + selectedStatus,
-                        "Status Updated", 
-                        JOptionPane.INFORMATION_MESSAGE);
-                    refreshData();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Failed to update room status.");
-                }
+                Room.RoomStatus newStatus = Room.RoomStatus.valueOf(selectedStatus.toUpperCase().replace(' ', '_'));
+                hotelService.updateRoomStatus(roomId, newStatus);
+                refreshData();
+                JOptionPane.showMessageDialog(this, 
+                    "Room " + roomNumber + " status updated to " + selectedStatus,
+                    "Status Updated", 
+                    JOptionPane.INFORMATION_MESSAGE);
             } catch (Exception e) {
                 JOptionPane.showMessageDialog(this, 
                     "Error updating room status: " + e.getMessage(),
@@ -341,52 +335,45 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
     
     @Override
     public void refreshData() {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                List<Room> rooms = hotelService.getAllRooms();
-                populateTable(rooms);
-                updateStatistics(rooms);
-                loadRoomTypes();
-                updateButtonStates();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, 
-                    "Error refreshing room data: " + e.getMessage(),
-                    "Refresh Error", 
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        });
+        SwingUtilities.invokeLater(this::refreshDataImpl);
     }
-    
-    private void loadRoomTypes() {
+
+    private void refreshDataImpl() {
         try {
-            List<RoomType> roomTypes = hotelService.getAllRoomTypes();
-            typeFilterCombo.removeAllItems();
-            typeFilterCombo.addItem("All Types");
-            
-            for (RoomType roomType : roomTypes) {
-                typeFilterCombo.addItem(roomType.getTypeName());
-            }
+            List<Room> rooms = hotelService.getAllRooms();
+            populateTable(rooms);
+            updateStatistics(rooms);
+            loadRoomTypes();
+            updateButtonStates();
         } catch (Exception e) {
-            // Ignore room type loading errors
+            JOptionPane.showMessageDialog(this, 
+                "Error refreshing room data: " + e.getMessage(),
+                "Refresh Error", 
+                JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+
     private void populateTable(List<Room> rooms) {
         tableModel.setRowCount(0);
         SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy");
         
         for (Room room : rooms) {
+            RoomType type = room.getRoomType();
+            Date cleanedDate = room.getLastCleaned();
+            String amenities = room.getAmenities();
+            String notes = room.getNotes();
+            
             Object[] row = new Object[]{
                 room.getRoomId(),
                 room.getRoomNumber(),
-                room.getRoomType() != null ? room.getRoomType().getTypeName() : "N/A",
-                room.getRoomType() != null ? String.format("$%.2f", room.getRoomType().getBasePrice()) : "N/A",
-                room.getRoomType() != null ? room.getRoomType().getMaxOccupancy() : "N/A",
-                room.getFloor(),
+                type != null ? type.getTypeName() : "N/A",
+                type != null ? String.format("$%.2f", type.getBasePrice()) : "N/A",
+                type != null ? type.getMaxOccupancy() : "N/A",
+                room.getFloorNumber(),
                 room.getRoomStatusString(),
-                room.getAmenities() != null ? room.getAmenities() : "",
-                room.getLastCleaned() != null ? dateFormat.format(room.getLastCleaned()) : "N/A",
-                room.getNotes() != null ? room.getNotes() : ""
+                amenities != null ? amenities : "",
+                cleanedDate != null ? dateFormat.format(cleanedDate) : "N/A",
+                notes != null ? notes : ""
             };
             tableModel.addRow(row);
         }
@@ -399,17 +386,13 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         int maintenanceRooms = 0;
         
         for (Room room : rooms) {
-            switch (room.getRoomStatus()) {
-                case AVAILABLE:
-                    availableRooms++;
-                    break;
-                case OCCUPIED:
-                    occupiedRooms++;
-                    break;
-                case MAINTENANCE:
-                case OUT_OF_ORDER:
-                    maintenanceRooms++;
-                    break;
+            Room.RoomStatus status = room.getStatus();
+            if (status == Room.RoomStatus.AVAILABLE) {
+                availableRooms++;
+            } else if (status == Room.RoomStatus.OCCUPIED) {
+                occupiedRooms++;
+            } else if (status == Room.RoomStatus.MAINTENANCE || status == Room.RoomStatus.OUT_OF_ORDER) {
+                maintenanceRooms++;
             }
         }
         
@@ -421,215 +404,233 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         maintenanceRoomsLabel.setText(String.valueOf(maintenanceRooms));
         occupancyRateLabel.setText(String.format("%.1f%%", occupancyRate));
     }
-}
-
-/**
- * Dialog for checking room availability
- */
-class RoomAvailabilityDialog extends JDialog {
-    private HotelManagementService hotelService;
-    private JTextField checkInField;
-    private JTextField checkOutField;
-    private JTable availabilityTable;
-    private DefaultTableModel tableModel;
     
-    public RoomAvailabilityDialog(JFrame parent, HotelManagementService hotelService) {
-        super(parent, "Check Room Availability", true);
-        this.hotelService = hotelService;
-        initializeDialog();
-    }
-    
-    private void initializeDialog() {
-        setSize(700, 500);
-        setLocationRelativeTo(getParent());
-        setLayout(new BorderLayout());
-        
-        // Date selection panel
-        JPanel datePanel = new JPanel(new FlowLayout());
-        datePanel.setBorder(BorderFactory.createTitledBorder("Select Date Range"));
-        
-        datePanel.add(new JLabel("Check-In Date (YYYY-MM-DD):"));
-        checkInField = new JTextField(10);
-        datePanel.add(checkInField);
-        
-        datePanel.add(new JLabel("Check-Out Date (YYYY-MM-DD):"));
-        checkOutField = new JTextField(10);
-        datePanel.add(checkOutField);
-        
-        JButton checkButton = new JButton("Check Availability");
-        checkButton.addActionListener(e -> checkAvailability());
-        datePanel.add(checkButton);
-        
-        add(datePanel, BorderLayout.NORTH);
-        
-        // Results table
-        String[] columnNames = {"Room Number", "Room Type", "Base Price", "Max Occupancy", "Amenities"};
-        tableModel = new DefaultTableModel(columnNames, 0);
-        availabilityTable = new JTable(tableModel);
-        availabilityTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        
-        JScrollPane scrollPane = new JScrollPane(availabilityTable);
-        add(scrollPane, BorderLayout.CENTER);
-        
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> dispose());
-        buttonPanel.add(closeButton);
-        add(buttonPanel, BorderLayout.SOUTH);
-        
-        // Set default dates (today and tomorrow)
-        Calendar cal = Calendar.getInstance();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        checkInField.setText(dateFormat.format(cal.getTime()));
-        
-        cal.add(Calendar.DAY_OF_MONTH, 1);
-        checkOutField.setText(dateFormat.format(cal.getTime()));
-    }
-    
-    private void checkAvailability() {
+    private void loadRoomTypes() {
         try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            Date checkInDate = dateFormat.parse(checkInField.getText().trim());
-            Date checkOutDate = dateFormat.parse(checkOutField.getText().trim());
-            
-            if (checkOutDate.before(checkInDate) || checkOutDate.equals(checkInDate)) {
-                JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
-                return;
+            List<RoomType> roomTypes = hotelService.getAllRoomTypes();
+            typeFilterCombo.removeAllItems();
+            typeFilterCombo.addItem("All Types");
+            for (RoomType type : roomTypes) {
+                typeFilterCombo.addItem(type.getTypeName());
             }
+        } catch (Exception e) {
+            // Ignore errors loading room types
+        }
+    }
+
+    /**
+     * Dialog for checking room availability
+     */
+    private static class RoomAvailabilityDialog extends JDialog {
+        private final EnhancedHotelManagementService hotelService;
+        private final JTextField checkInField;
+        private final JTextField checkOutField;
+        private final DefaultTableModel tableModel;
+    
+        public RoomAvailabilityDialog(JFrame parent, EnhancedHotelManagementService hotelService) {
+            super(parent, "Check Room Availability", true);
+            this.hotelService = hotelService;
+            checkInField = new JTextField(10);
+            checkOutField = new JTextField(10);
+            tableModel = new DefaultTableModel(new String[]{"Room Number", "Room Type", "Base Price", "Max Occupancy", "Amenities"}, 0);
+            initializeDialog();
+        }
+    
+        private void initializeDialog() {
+            setSize(700, 500);
+            setLocationRelativeTo(getParent());
+            setLayout(new BorderLayout());
             
-            List<Room> availableRooms = hotelService.getAvailableRooms(checkInDate, checkOutDate);
+            // Date selection panel
+            JPanel datePanel = new JPanel(new FlowLayout());
+            datePanel.setBorder(BorderFactory.createTitledBorder("Select Date Range"));
             
-            tableModel.setRowCount(0);
+            datePanel.add(new JLabel("Check-In Date (YYYY-MM-DD):"));
+            datePanel.add(checkInField);
             
-            if (availableRooms.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
-                    "No rooms available for the selected dates.",
-                    "No Availability", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                for (Room room : availableRooms) {
-                    Object[] row = {
-                        room.getRoomNumber(),
-                        room.getRoomType() != null ? room.getRoomType().getTypeName() : "N/A",
-                        room.getRoomType() != null ? String.format("$%.2f", room.getRoomType().getBasePrice()) : "N/A",
-                        room.getRoomType() != null ? room.getRoomType().getMaxOccupancy() : "N/A",
-                        room.getAmenities() != null ? room.getAmenities() : ""
-                    };
-                    tableModel.addRow(row);
+            datePanel.add(new JLabel("Check-Out Date (YYYY-MM-DD):"));
+            datePanel.add(checkOutField);
+            
+            JButton checkButton = new JButton("Check Availability");
+            checkButton.addActionListener(e -> checkAvailability());
+            datePanel.add(checkButton);
+            
+            add(datePanel, BorderLayout.NORTH);
+            
+            // Results table
+            JTable availabilityTable = new JTable(tableModel);
+            availabilityTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+            
+            JScrollPane scrollPane = new JScrollPane(availabilityTable);
+            add(scrollPane, BorderLayout.CENTER);
+            
+            // Button panel
+            JPanel buttonPanel = new JPanel(new FlowLayout());
+            JButton closeButton = new JButton("Close");
+            closeButton.addActionListener(e -> dispose());
+            buttonPanel.add(closeButton);
+            add(buttonPanel, BorderLayout.SOUTH);
+            
+            // Set default dates (today and tomorrow)
+            Calendar cal = Calendar.getInstance();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            checkInField.setText(dateFormat.format(cal.getTime()));
+            
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+            checkOutField.setText(dateFormat.format(cal.getTime()));
+        }
+    
+        private void checkAvailability() {
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                Date checkInDate = dateFormat.parse(checkInField.getText().trim());
+                Date checkOutDate = dateFormat.parse(checkOutField.getText().trim());
+                
+                if (checkOutDate.before(checkInDate) || checkOutDate.equals(checkInDate)) {
+                    JOptionPane.showMessageDialog(this, "Check-out date must be after check-in date.");
+                    return;
                 }
                 
-                JOptionPane.showMessageDialog(this, 
-                    availableRooms.size() + " rooms available for the selected dates.",
-                    "Availability Results", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            }
-            
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
-                "Error checking availability: " + e.getMessage(),
-                "Availability Error", 
-                JOptionPane.ERROR_MESSAGE);
-        }
-    }
-}
-
-/**
- * Dialog for showing room utilization statistics
- */
-class RoomUtilizationDialog extends JDialog {
-    private HotelManagementService hotelService;
-    private JTextField startDateField;
-    private JTextField endDateField;
-    private JTable utilizationTable;
-    private DefaultTableModel tableModel;
-    
-    public RoomUtilizationDialog(JFrame parent, HotelManagementService hotelService) {
-        super(parent, "Room Utilization Statistics", true);
-        this.hotelService = hotelService;
-        initializeDialog();
-    }
-    
-    private void initializeDialog() {
-        setSize(600, 400);
-        setLocationRelativeTo(getParent());
-        setLayout(new BorderLayout());
-        
-        // Date selection panel
-        JPanel datePanel = new JPanel(new FlowLayout());
-        datePanel.setBorder(BorderFactory.createTitledBorder("Select Date Range"));
-        
-        datePanel.add(new JLabel("Start Date (YYYY-MM-DD):"));
-        startDateField = new JTextField(10);
-        datePanel.add(startDateField);
-        
-        datePanel.add(new JLabel("End Date (YYYY-MM-DD):"));
-        endDateField = new JTextField(10);
-        datePanel.add(endDateField);
-        
-        JButton generateButton = new JButton("Generate Report");
-        generateButton.addActionListener(e -> generateUtilizationReport());
-        datePanel.add(generateButton);
-        
-        add(datePanel, BorderLayout.NORTH);
-        
-        // Results table
-        String[] columnNames = {"Room Type", "Total Rooms", "Occupied Days", "Available Days", "Utilization %"};
-        tableModel = new DefaultTableModel(columnNames, 0);
-        utilizationTable = new JTable(tableModel);
-        utilizationTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        
-        JScrollPane scrollPane = new JScrollPane(utilizationTable);
-        add(scrollPane, BorderLayout.CENTER);
-        
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> dispose());
-        buttonPanel.add(closeButton);
-        add(buttonPanel, BorderLayout.SOUTH);
-        
-        // Set default dates (last 30 days)
-        Calendar cal = Calendar.getInstance();
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        endDateField.setText(dateFormat.format(cal.getTime()));
-        
-        cal.add(Calendar.DAY_OF_MONTH, -30);
-        startDateField.setText(dateFormat.format(cal.getTime()));
-    }
-    
-    private void generateUtilizationReport() {
-        try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            Date startDate = dateFormat.parse(startDateField.getText().trim());
-            Date endDate = dateFormat.parse(endDateField.getText().trim());
-            
-            if (endDate.before(startDate)) {
-                JOptionPane.showMessageDialog(this, "End date must be after start date.");
-                return;
-            }
-            
-            List<Object[]> utilizationStats = hotelService.getRoomUtilizationStats(startDate, endDate);
-            
-            tableModel.setRowCount(0);
-            
-            if (utilizationStats.isEmpty()) {
-                JOptionPane.showMessageDialog(this, 
-                    "No utilization data found for the selected period.",
-                    "No Data", 
-                    JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                for (Object[] stat : utilizationStats) {
-                    tableModel.addRow(stat);
+                List<Room> availableRooms = hotelService.getAvailableRooms(checkInDate, checkOutDate);
+                
+                tableModel.setRowCount(0);
+                
+                if (availableRooms.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, 
+                        "No rooms available for the selected dates.",
+                        "No Availability", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    for (Room room : availableRooms) {
+                        Object[] row = {
+                            room.getRoomNumber(),
+                            room.getRoomType() != null ? room.getRoomType().getTypeName() : "N/A",
+                            room.getRoomType() != null ? String.format("$%.2f", room.getRoomType().getBasePrice()) : "N/A",
+                            room.getRoomType() != null ? room.getRoomType().getMaxOccupancy() : "N/A",
+                            room.getAmenities() != null ? room.getAmenities() : ""
+                        };
+                        tableModel.addRow(row);
+                    }
+                    
+                    JOptionPane.showMessageDialog(this, 
+                        availableRooms.size() + " rooms available for the selected dates.",
+                        "Availability Results", 
+                        JOptionPane.INFORMATION_MESSAGE);
                 }
+                
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Error checking availability: " + e.getMessage(),
+                    "Availability Error", 
+                    JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    /**
+     * Dialog for showing room utilization statistics
+     */
+    private static class RoomUtilizationDialog extends JDialog {
+        private final EnhancedHotelManagementService hotelService;
+        private final JTextField startDateField;
+        private final JTextField endDateField;
+        private final DefaultTableModel tableModel;
+    
+        public RoomUtilizationDialog(JFrame parent, EnhancedHotelManagementService hotelService) {
+            super(parent, "Room Utilization Statistics", true);
+            this.hotelService = hotelService;
+            startDateField = new JTextField(10);
+            endDateField = new JTextField(10);
+            tableModel = new DefaultTableModel(new String[]{"Room Type", "Total Rooms", "Occupied Days", "Available Days", "Utilization %"}, 0);
+            initializeDialog();
+        }
+    
+        private void initializeDialog() {
+            setSize(600, 400);
+            setLocationRelativeTo(getParent());
+            setLayout(new BorderLayout());
             
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, 
-                "Error generating utilization report: " + e.getMessage(),
-                "Report Error", 
-                JOptionPane.ERROR_MESSAGE);
+            // Date selection panel
+            JPanel datePanel = new JPanel(new FlowLayout());
+            datePanel.setBorder(BorderFactory.createTitledBorder("Select Date Range"));
+            
+            datePanel.add(new JLabel("Start Date (YYYY-MM-DD):"));
+            datePanel.add(startDateField);
+            
+            datePanel.add(new JLabel("End Date (YYYY-MM-DD):"));
+            datePanel.add(endDateField);
+            
+            JButton generateButton = new JButton("Generate Report");
+            generateButton.addActionListener(e -> generateUtilizationReport());
+            datePanel.add(generateButton);
+            
+            add(datePanel, BorderLayout.NORTH);
+            
+            // Results table
+            JTable utilizationTable = new JTable(tableModel);
+            utilizationTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+            
+            JScrollPane scrollPane = new JScrollPane(utilizationTable);
+            add(scrollPane, BorderLayout.CENTER);
+            
+            // Button panel
+            JPanel buttonPanel = new JPanel(new FlowLayout());
+            JButton closeButton = new JButton("Close");
+            closeButton.addActionListener(e -> dispose());
+            buttonPanel.add(closeButton);
+            add(buttonPanel, BorderLayout.SOUTH);
+            
+            // Set default dates (last 30 days)
+            Calendar cal = Calendar.getInstance();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            endDateField.setText(dateFormat.format(cal.getTime()));
+            
+            cal.add(Calendar.DAY_OF_MONTH, -30);
+            startDateField.setText(dateFormat.format(cal.getTime()));
+        }
+    
+        private void generateUtilizationReport() {
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+                Date startDate = dateFormat.parse(startDateField.getText().trim());
+                Date endDate = dateFormat.parse(endDateField.getText().trim());
+                
+                if (endDate.before(startDate)) {
+                    JOptionPane.showMessageDialog(this, "End date must be after start date.");
+                    return;
+                }
+                
+                Map<RoomType, Double> utilizationStats = hotelService.getRoomUtilizationStats(startDate, endDate);
+                
+                tableModel.setRowCount(0);
+                
+                if (utilizationStats.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, 
+                        "No utilization data found for the selected period.",
+                        "No Data", 
+                        JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    for (Map.Entry<RoomType, Double> entry : utilizationStats.entrySet()) {
+                        RoomType roomType = entry.getKey();
+                        Double utilization = entry.getValue();
+                        
+                        Object[] row = {
+                            roomType.getTypeName(),
+                            "N/A", // Total rooms not available in this data
+                            "N/A", // Occupied days not available in this data
+                            "N/A", // Available days not available in this data
+                            String.format("%.1f%%", utilization != null ? utilization : 0.0)
+                        };
+                        tableModel.addRow(row);
+                    }
+                }
+                
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, 
+                    "Error generating utilization report: " + e.getMessage(),
+                    "Report Error", 
+                    JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 }
-

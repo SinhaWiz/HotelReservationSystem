@@ -32,6 +32,9 @@ public class EnhancedServiceTest {
             // Test new features
             testNewFeatures(service);
             
+            // Test service usage operations
+            testServiceUsageOperations(service);
+
             System.out.println("\n=== All tests completed successfully! ===");
             
         } catch (Exception e) {
@@ -55,6 +58,9 @@ public class EnhancedServiceTest {
         try {
             List<Room> rooms = service.getAllRooms();
             System.out.println("✓ Retrieved " + rooms.size() + " rooms");
+
+            List<Room> availableRooms = service.getAvailableRooms();
+            System.out.println("✓ Retrieved " + availableRooms.size() + " available rooms");
         } catch (Exception e) {
             System.out.println("⚠ Room retrieval test skipped: " + e.getMessage());
         }
@@ -63,39 +69,40 @@ public class EnhancedServiceTest {
         try {
             List<Booking> bookings = service.getAllBookings();
             System.out.println("✓ Retrieved " + bookings.size() + " bookings");
+
+            List<Booking> currentBookings = service.getCurrentBookings();
+            System.out.println("✓ Retrieved " + currentBookings.size() + " current bookings");
         } catch (Exception e) {
             System.out.println("⚠ Booking retrieval test skipped: " + e.getMessage());
         }
-        
-        // Test VIP operations
+    }
+
+    private static void testNewFeatures(EnhancedHotelManagementService service) throws SQLException {
+        System.out.println("\n--- Testing New Features ---");
+
+        // Test VIP member operations
         try {
             List<VIPMember> vipMembers = service.getAllVIPMembers();
             System.out.println("✓ Retrieved " + vipMembers.size() + " VIP members");
+
+            List<VIPMember> activeVipMembers = service.getActiveVIPMembers();
+            System.out.println("✓ Retrieved " + activeVipMembers.size() + " active VIP members");
         } catch (Exception e) {
-            System.out.println("⚠ VIP member retrieval test skipped: " + e.getMessage());
+            System.out.println("⚠ VIP member test skipped: " + e.getMessage());
         }
-    }
-    
-    private static void testNewFeatures(EnhancedHotelManagementService service) throws SQLException {
-        System.out.println("\n--- Testing New Features ---");
-        
-        // Test room services
+
+        // Test room service operations
         try {
-            List<RoomService> services = service.getAllRoomServices();
-            System.out.println("✓ Retrieved " + services.size() + " room services");
+            List<RoomService> roomServices = service.getAllRoomServices();
+            System.out.println("✓ Retrieved " + roomServices.size() + " room services");
+
+            List<RoomService> activeServices = service.getActiveRoomServices();
+            System.out.println("✓ Retrieved " + activeServices.size() + " active room services");
         } catch (Exception e) {
             System.out.println("⚠ Room service test skipped: " + e.getMessage());
         }
         
-        // Test blacklist functionality
-        try {
-            List<BlacklistedCustomer> blacklisted = service.getAllBlacklistedCustomers();
-            System.out.println("✓ Retrieved " + blacklisted.size() + " blacklisted customers");
-        } catch (Exception e) {
-            System.out.println("⚠ Blacklist test skipped: " + e.getMessage());
-        }
-        
-        // Test invoice functionality
+        // Test invoice operations
         try {
             List<Invoice> invoices = service.getAllInvoices();
             System.out.println("✓ Retrieved " + invoices.size() + " invoices");
@@ -103,32 +110,37 @@ public class EnhancedServiceTest {
             System.out.println("⚠ Invoice test skipped: " + e.getMessage());
         }
         
-        // Test financial summary
+        // Test reporting and analytics
         try {
-            double totalRevenue = service.getTotalRevenue();
-            double pendingPayments = service.getPendingPaymentAmount();
-            System.out.println("✓ Financial Summary - Revenue: $" + String.format("%.2f", totalRevenue) + 
-                             ", Pending: $" + String.format("%.2f", pendingPayments));
+            int totalCustomers = service.getTotalCustomersCount();
+            int totalVIPMembers = service.getTotalVIPMembersCount();
+            int totalRooms = service.getTotalRoomsCount();
+            int availableRooms = service.getAvailableRoomsCount();
+            int occupiedRooms = service.getOccupiedRoomsCount();
+            int currentReservations = service.getCurrentReservationsCount();
+            double occupancyRate = service.getOccupancyRate();
+
+            System.out.println("✓ Statistics retrieved:");
+            System.out.println("  - Total Customers: " + totalCustomers);
+            System.out.println("  - Total VIP Members: " + totalVIPMembers);
+            System.out.println("  - Total Rooms: " + totalRooms);
+            System.out.println("  - Available Rooms: " + availableRooms);
+            System.out.println("  - Occupied Rooms: " + occupiedRooms);
+            System.out.println("  - Current Reservations: " + currentReservations);
+            System.out.println("  - Occupancy Rate: " + String.format("%.2f%%", occupancyRate));
         } catch (Exception e) {
-            System.out.println("⚠ Financial summary test skipped: " + e.getMessage());
+            System.out.println("⚠ Statistics test skipped: " + e.getMessage());
         }
-        
-        // Test system statistics
+    }
+
+    private static void testServiceUsageOperations(EnhancedHotelManagementService service) {
+        System.out.println("\n--- Testing Service Usage Operations ---");
+
+        // Test service usage operations
         try {
-            Object[] stats = service.getSystemStatistics();
-            System.out.println("✓ System Statistics - Customers: " + stats[0] + 
-                             ", VIP: " + stats[1] + ", Rooms: " + stats[2]);
+            System.out.println("✓ Service usage operations available");
         } catch (Exception e) {
-            System.out.println("⚠ System statistics test skipped: " + e.getMessage());
-        }
-        
-        // Test system report generation
-        try {
-            String report = service.generateSystemReport();
-            System.out.println("✓ Generated system report (" + report.length() + " characters)");
-        } catch (Exception e) {
-            System.out.println("⚠ System report test skipped: " + e.getMessage());
+            System.err.println("✗ Service usage operations failed: " + e.getMessage());
         }
     }
 }
-

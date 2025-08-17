@@ -1,24 +1,24 @@
 package com.hotel.model;
 
 import com.hotel.dao.*;
+
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Enhanced service class for hotel management operations with new features
- * Includes room services, blacklist management, invoice generation, and more
+ * Includes room services, invoice generation, and more
  */
 public class EnhancedHotelManagementService {
-    
-    private CustomerDAO customerDAO;
-    private BookingDAO bookingDAO;
-    private RoomDAO roomDAO;
-    private VIPMemberDAO vipMemberDAO;
-    private RoomServiceDAO roomServiceDAO;
-    private ServiceUsageDAO serviceUsageDAO;
-    private BlacklistedCustomerDAO blacklistedCustomerDAO;
-    private InvoiceDAO invoiceDAO;
+    private final CustomerDAO customerDAO;
+    private final BookingDAO bookingDAO;
+    private final RoomDAO roomDAO;
+    private final VIPMemberDAO vipMemberDAO;
+    private final RoomServiceDAO roomServiceDAO;
+    private final ServiceUsageDAO serviceUsageDAO;
+    private final InvoiceDAO invoiceDAO;
 
     public EnhancedHotelManagementService() {
         this.customerDAO = new CustomerDAO();
@@ -27,17 +27,12 @@ public class EnhancedHotelManagementService {
         this.vipMemberDAO = new VIPMemberDAO();
         this.roomServiceDAO = new RoomServiceDAO();
         this.serviceUsageDAO = new ServiceUsageDAO();
-        this.blacklistedCustomerDAO = new BlacklistedCustomerDAO();
         this.invoiceDAO = new InvoiceDAO();
     }
-    
+
     // ==================== ENHANCED CUSTOMER MANAGEMENT ====================
     
     public Customer createCustomer(Customer customer) throws SQLException {
-        // Check if customer is blacklisted before creating
-        if (blacklistedCustomerDAO.isCustomerBlacklisted(customer.getCustomerId())) {
-            throw new SQLException("Cannot create booking for blacklisted customer");
-        }
         customerDAO.save(customer);
         return customer;
     }
@@ -50,59 +45,94 @@ public class EnhancedHotelManagementService {
         return customerDAO.findAll();
     }
     
-    public void updateCustomer(Customer customer) throws SQLException {
+    public boolean updateCustomer(Customer customer) throws SQLException {
         customerDAO.update(customer);
+        return false;
     }
     
     public List<Customer> searchCustomers(String searchTerm) throws SQLException {
         return customerDAO.searchByName(searchTerm);
     }
     
+    public Customer findCustomerById(int customerId) throws SQLException {
+        return customerDAO.findById(customerId);
+    }
+
+    public Customer registerCustomer(String firstName, String lastName, String email, String phone, Date dateOfBirth, String address) throws SQLException {
+        Customer customer = new Customer();
+        customer.setFirstName(firstName);
+        customer.setLastName(lastName);
+        customer.setEmail(email);
+        customer.setPhone(phone);
+        customer.setDateOfBirth(dateOfBirth);
+        customer.setAddress(address);
+        customer.setRegistrationDate(new Date());
+        customer.setTotalSpent(0.0);
+        customer.setLoyaltyPoints(0);
+
+        return createCustomer(customer);
+    }
+
     // ==================== ENHANCED BOOKING MANAGEMENT ====================
     
     public Booking createBooking(Booking booking) throws SQLException {
-        // Check if customer is blacklisted
-       blacklistedCustomerDAO.isCustomerBlacklisted(booking.getCustomerId()) {
-            throw new SQLException("Cannot create booking for blacklisted customer");
-        }
-        
-        // Validate room availability
+        // Check room availability
         if (!isRoomAvailable(booking.getRoomId(), booking.getCheckInDate(), booking.getCheckOutDate())) {
             throw new SQLException("Room is not available for the selected dates");
         }
-        
-        bookingDAO.save(booking);
-        return booking;
+
+        return bookingDAO.create(booking);
     }
     
-    public Booking getBooking(long bookingId) throws SQLException {
-        return bookingDAO.findById((int) bookingId);
+    public Booking getBooking(int bookingId) throws SQLException {
+        return bookingDAO.findById(bookingId);
     }
     
     public List<Booking> getAllBookings() throws SQLException {
-        return bookingDAO.findAll();
+        return bookingDAO.getAll();
     }
     
     public List<Booking> getCustomerBookings(int customerId) throws SQLException {
         return bookingDAO.findByCustomerId(customerId);
     }
     
-    public List<Booking> getCurrentReservations() throws SQLException {
-        return bookingDAO.findCurrentReservations();
+    public List<Booking> getCurrentBookings() throws SQLException {
+        return bookingDAO.getCurrentBookings();
     }
     
-    public List<Booking> getExpiredReservations() throws SQLException {
-        return bookingDAO.findExpiredReservations();
+    public List<Booking> getExpiredBookings() throws SQLException {
+        return bookingDAO.getExpiredBookings();
     }
     
     public void updateBooking(Booking booking) throws SQLException {
         bookingDAO.update(booking);
     }
     
-    public void cancelBooking(long bookingId) throws SQLException {
-        bookingDAO.cancelBooking(bookingId);
+    public boolean cancelBooking(int bookingId) throws SQLException {
+        bookingDAO.cancel(bookingId);
+        return false;
     }
     
+    public List<Booking> getBookingsByDateRange(Date startDate, Date endDate) throws SQLException {
+        return bookingDAO.getBookingsByDateRange(startDate, endDate);
+    }
+
+    public boolean checkInCustomer(int bookingId) throws SQLException {
+        return bookingDAO.checkInCustomer(bookingId);
+    }
+
+    public boolean checkOutCustomer(int bookingId) throws SQLException {
+        return bookingDAO.checkOutCustomer(bookingId);
+    }
+
+    public Booking getBookingById(int bookingId) throws SQLException {
+        return bookingDAO.getBookingById(bookingId);
+    }
+
+    public List<Booking> getCurrentReservations() throws SQLException {
+        return bookingDAO.getCurrentBookings();
+    }
+
     // ==================== ENHANCED ROOM MANAGEMENT ====================
     
     public List<Room> getAllRooms() throws SQLException {
@@ -110,21 +140,84 @@ public class EnhancedHotelManagementService {
     }
     
     public List<Room> getAvailableRooms() throws SQLException {
-        return roomDAO.findAvailableRooms();
+        return roomDAO.findAvailable();
     }
     
     public List<Room> getAvailableRooms(Date checkIn, Date checkOut) throws SQLException {
-        return roomDAO.findAvailableRooms(checkIn, checkOut);
+        return roomDAO.findAvailableForDates(checkIn, checkOut);
     }
     
     public boolean isRoomAvailable(int roomId, Date checkIn, Date checkOut) throws SQLException {
-        return roomDAO.isRoomAvailable(roomId, checkIn, checkOut);
+        return roomDAO.checkAvailability(roomId, checkIn, checkOut);
     }
     
     public void updateRoomStatus(int roomId, String status) throws SQLException {
-        roomDAO.updateRoomStatus(roomId, status);
+        Room room = roomDAO.findById(roomId);
+        if (room != null) {
+            room.setStatusFromString(status);
+            roomDAO.update(room);
+        }
     }
-    
+
+    // Room Management Methods
+    public List<Room> getRoomsByStatus(Room.RoomStatus status) throws SQLException {
+        List<Room> allRooms = roomDAO.findAll();
+        return allRooms.stream()
+                .filter(room -> room.getStatus() == status)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    public boolean updateRoomStatus(int roomId, Room.RoomStatus newStatus) throws SQLException {
+        Room room = roomDAO.findById(roomId);
+        if (room != null) {
+            room.setStatus(newStatus);
+            roomDAO.update(room);
+            return true;
+        }
+        return false;
+    }
+
+    public List<RoomType> getAllRoomTypes() throws SQLException {
+        return roomDAO.getAllRoomTypes();
+    }
+
+    public Map<RoomType, Double> getRoomUtilizationStats(Date startDate, Date endDate) throws SQLException {
+        List<Room> allRooms = roomDAO.findAll();
+        Map<RoomType, Integer> totalRooms = new java.util.HashMap<>();
+        Map<RoomType, Double> stats = new java.util.HashMap<>();
+
+        for (Room room : allRooms) {
+            RoomType roomType = room.getRoomType();
+            totalRooms.merge(roomType, 1, Integer::sum);
+
+            List<Booking> bookings = bookingDAO.findByRoomIdAndDates(room.getRoomId(), startDate, endDate);
+            double occupiedDays = 0;
+
+            for (Booking booking : bookings) {
+                if (booking.getCheckOutDate() != null && booking.getCheckInDate() != null) {
+                    long diffInMillies = booking.getCheckOutDate().getTime() - booking.getCheckInDate().getTime();
+                    occupiedDays += diffInMillies / (1000.0 * 60 * 60 * 24);
+                }
+            }
+
+            stats.merge(roomType, occupiedDays, Double::sum);
+        }
+
+        for (Map.Entry<RoomType, Double> entry : stats.entrySet()) {
+            RoomType roomType = entry.getKey();
+            double occupiedDays = entry.getValue();
+            int total = totalRooms.get(roomType);
+
+            // Calculate utilization percentage
+            double totalPossibleDays = total * ((endDate.getTime() - startDate.getTime()) / (1000.0 * 60 * 60 * 24));
+            double utilization = (occupiedDays / totalPossibleDays) * 100;
+
+            stats.put(roomType, utilization);
+        }
+
+        return stats;
+    }
+
     // ==================== ROOM SERVICE MANAGEMENT ====================
     
     public List<RoomService> getAllRoomServices() throws SQLException {
@@ -132,11 +225,11 @@ public class EnhancedHotelManagementService {
     }
     
     public List<RoomService> getActiveRoomServices() throws SQLException {
-        return roomServiceDAO.findActiveServices();
+        return roomServiceDAO.findActive();
     }
     
     public List<RoomService> getServicesForRoomType(int roomTypeId) throws SQLException {
-        return roomServiceDAO.findServicesForRoomType(roomTypeId);
+        return roomServiceDAO.findByRoomType(roomTypeId);
     }
     
     public RoomService getRoomService(int serviceId) throws SQLException {
@@ -144,7 +237,7 @@ public class EnhancedHotelManagementService {
     }
     
     public void createRoomService(RoomService service) throws SQLException {
-        roomServiceDAO.save(service);
+        roomServiceDAO.create(service);
     }
     
     public void updateRoomService(RoomService service) throws SQLException {
@@ -152,7 +245,7 @@ public class EnhancedHotelManagementService {
     }
     
     public List<RoomService> searchRoomServices(String searchTerm) throws SQLException {
-        return roomServiceDAO.searchByName(searchTerm);
+        return roomServiceDAO.search(searchTerm);
     }
     
     public List<RoomService> getServicesByCategory(RoomService.ServiceCategory category) throws SQLException {
@@ -162,7 +255,7 @@ public class EnhancedHotelManagementService {
     // ==================== SERVICE USAGE MANAGEMENT ====================
     
     public long addServiceUsage(long bookingId, int customerId, int serviceId, int quantity) throws SQLException {
-        return serviceUsageDAO.addServiceUsage(bookingId, customerId, serviceId, quantity);
+        return serviceUsageDAO.create(bookingId, customerId, serviceId, quantity);
     }
     
     public List<ServiceUsage> getCustomerServiceUsage(int customerId) throws SQLException {
@@ -173,271 +266,306 @@ public class EnhancedHotelManagementService {
         return serviceUsageDAO.findByBookingId(bookingId);
     }
     
-    public List<ServiceUsage> getCustomerServiceSummary(int customerId) throws SQLException {
-        return serviceUsageDAO.getCustomerServiceSummary(customerId);
+    // ==================== VIP MEMBER MANAGEMENT ====================
+
+    public VIPMember createVIPMember(VIPMember vipMember) throws SQLException {
+        int vipId = vipMemberDAO.createVIPMember(vipMember);
+        vipMember.setVipId(vipId);
+        return vipMember;
+    }
+
+    public VIPMember getVIPMemberByCustomerId(int customerId) throws SQLException {
+        return vipMemberDAO.findByCustomerId(customerId);
+    }
+
+    public List<VIPMember> getAllVIPMembers() throws SQLException {
+        return vipMemberDAO.findAll();
+    }
+
+    public List<VIPMember> getActiveVIPMembers() throws SQLException {
+        return vipMemberDAO.findAllActive();
     }
     
-    public double calculateCustomerServiceTotal(int customerId, Long bookingId) throws SQLException {
-        return serviceUsageDAO.calculateCustomerServiceTotal(customerId, bookingId);
+    public void updateVIPMember(VIPMember vipMember) throws SQLException {
+        vipMemberDAO.updateVIPMember(vipMember);
     }
     
-    public List<ServiceUsage> getMostPopularServices(int limit) throws SQLException {
-        return serviceUsageDAO.getMostPopularServices(limit);
+    public boolean deactivateVIPMember(int vipId) throws SQLException {
+        return vipMemberDAO.deactivateVIPMember(vipId);
     }
-    
-    // ==================== BLACKLIST MANAGEMENT ====================
-    
-    public int blacklistCustomer(int customerId, String reason, String blacklistedBy, Date expiryDate) throws SQLException {
-        return blacklistedCustomerDAO.blacklistCustomer(customerId, reason, blacklistedBy, expiryDate);
+
+    public String checkVIPEligibility(int customerId) throws SQLException {
+        return vipMemberDAO.checkVIPEligibility(customerId);
     }
-    
-    public void removeFromBlacklist(int customerId, String removedBy) throws SQLException {
-        blacklistedCustomerDAO.removeFromBlacklist(customerId, removedBy);
+
+    public List<VIPMember> getVIPMembersByLevel(VIPMember.MembershipLevel level) throws SQLException {
+        return vipMemberDAO.findByMembershipLevel(level);
     }
-    
-    public boolean isCustomerBlacklisted(int customerId) throws SQLException {
-        return blacklistedCustomerDAO.isCustomerBlacklisted(customerId);
+
+    public void processVIPRenewals() throws SQLException {
+        vipMemberDAO.processVIPRenewals();
     }
-    
-    public List<BlacklistedCustomer> getAllBlacklistedCustomers() throws SQLException {
-        return blacklistedCustomerDAO.findAllBlacklistedCustomers();
-    }
-    
-    public List<BlacklistedCustomer> getActiveBlacklistedCustomers() throws SQLException {
-        return blacklistedCustomerDAO.findActiveBlacklistedCustomers();
-    }
-    
-    public List<BlacklistedCustomer> searchBlacklistedCustomers(String searchTerm) throws SQLException {
-        return blacklistedCustomerDAO.searchBlacklistedCustomers(searchTerm);
-    }
-    
-    public int getActiveBlacklistCount() throws SQLException {
-        return blacklistedCustomerDAO.getActiveBlacklistCount();
-    }
-    
-    public List<String> getBlacklistReasonStatistics() throws SQLException {
-        return blacklistedCustomerDAO.getBlacklistReasonStatistics();
+
+    public void promoteTopCustomersToVIP(String promotedBy) throws SQLException {
+        vipMemberDAO.promoteTopCustomersToVIP(promotedBy);
     }
     
     // ==================== INVOICE MANAGEMENT ====================
     
-    public Invoice generateInvoice(long bookingId, double taxRate, String createdBy) throws SQLException {
-        return invoiceDAO.generateInvoice(bookingId, taxRate, createdBy);
+    public Invoice createInvoice(int customerId, long bookingId) throws SQLException {
+        return invoiceDAO.createInvoice(customerId, bookingId);
     }
     
-    public Invoice getInvoice(long invoiceId) throws SQLException {
+    public Invoice getInvoice(int invoiceId) throws SQLException {
         return invoiceDAO.findById(invoiceId);
-    }
-    
-    public Invoice getInvoiceByNumber(String invoiceNumber) throws SQLException {
-        return invoiceDAO.findByInvoiceNumber(invoiceNumber);
     }
     
     public List<Invoice> getCustomerInvoices(int customerId) throws SQLException {
         return invoiceDAO.findByCustomerId(customerId);
     }
     
-    public List<Invoice> getBookingInvoices(long bookingId) throws SQLException {
-        return invoiceDAO.findByBookingId(bookingId);
-    }
-    
     public List<Invoice> getAllInvoices() throws SQLException {
         return invoiceDAO.findAll();
     }
-    
-    public List<Invoice> getPendingInvoices() throws SQLException {
-        return invoiceDAO.findPendingInvoices();
+
+    public void updateInvoicePaymentStatus(int invoiceId, Invoice.PaymentStatus status) throws SQLException {
+        invoiceDAO.updatePaymentStatus(invoiceId, status);
+    }
+
+    public List<Invoice> getUnpaidInvoices() throws SQLException {
+        return invoiceDAO.findUnpaidInvoices();
+    }
+
+    public List<Invoice> getInvoicesByDateRange(Date startDate, Date endDate) throws SQLException {
+        return invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
+    }
+
+    // ==================== REPORTING AND ANALYTICS ====================
+
+    public double getTotalRevenue(Date startDate, Date endDate) throws SQLException {
+        List<Invoice> invoices = invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
+        return invoices.stream()
+                .filter(invoice -> invoice.getPaymentStatus() == Invoice.PaymentStatus.PAID)
+                .mapToDouble(Invoice::getTotalAmount)
+                .sum();
+    }
+
+    public int getTotalCustomersCount() throws SQLException {
+        return customerDAO.findAll().size();
+    }
+
+    public int getTotalVIPMembersCount() throws SQLException {
+        return vipMemberDAO.findAllActive().size();
+    }
+
+    public int getTotalRoomsCount() throws SQLException {
+        return roomDAO.findAll().size();
+    }
+
+    public int getAvailableRoomsCount() throws SQLException {
+        return roomDAO.findAvailable().size();
     }
     
-    public List<Invoice> getOverdueInvoices() throws SQLException {
-        return invoiceDAO.findOverdueInvoices();
+    public int getOccupiedRoomsCount() throws SQLException {
+        List<Room> allRooms = roomDAO.findAll();
+        return (int) allRooms.stream()
+                .filter(room -> room.getStatus() == Room.RoomStatus.OCCUPIED)
+                .count();
     }
     
-    public void updateInvoicePaymentStatus(long invoiceId, Invoice.PaymentStatus paymentStatus, 
-                                         Date paymentDate, String paymentMethod) throws SQLException {
-        invoiceDAO.updatePaymentStatus(invoiceId, paymentStatus, paymentDate, paymentMethod);
+    public int getCurrentReservationsCount() throws SQLException {
+        return bookingDAO.getCurrentBookings().size();
     }
     
-    public double getTotalRevenue() throws SQLException {
-        return invoiceDAO.getTotalRevenue();
-    }
-    
-    public double getPendingPaymentAmount() throws SQLException {
-        return invoiceDAO.getPendingPaymentAmount();
-    }
-    
-    // ==================== ENHANCED VIP MEMBER MANAGEMENT ====================
-    
-    public List<VIPMember> getAllVIPMembers() throws SQLException {
-        return vipMemberDAO.findAll();
-    }
-    
-    public VIPMember getVIPMember(int vipId) throws SQLException {
-        return vipMemberDAO.findById(vipId);
-    }
-    
-    public VIPMember getVIPMemberByCustomerId(int customerId) throws SQLException {
-        return vipMemberDAO.findByCustomerId(customerId);
-    }
-    
-    public void createVIPMember(VIPMember vipMember) throws SQLException {
-        vipMemberDAO.save(vipMember);
-    }
-    
-    public void updateVIPMember(VIPMember vipMember) throws SQLException {
-        vipMemberDAO.update(vipMember);
-    }
-    
-    public void promoteTopCustomersToVIP(String promotedBy) throws SQLException {
-        vipMemberDAO.promoteTopCustomersToVIP(promotedBy);
-    }
-    
-    // ==================== ENHANCED BUSINESS LOGIC METHODS ====================
-    
-    public double calculateBookingTotal(Booking booking) throws SQLException {
-        // Get room rate
-        Room room = roomDAO.findById(booking.getRoomId());
-        if (room == null) {
-            throw new SQLException("Room not found");
-        }
-        
-        // Calculate number of nights
-        long diffInMillies = booking.getCheckOutDate().getTime() - booking.getCheckInDate().getTime();
-        int nights = (int) (diffInMillies / (24 * 60 * 60 * 1000));
-        
-        double baseAmount = room.getRoomType().getBaseRate() * nights;
-        
-        // Apply VIP discount if applicable
-        VIPMember vipMember = vipMemberDAO.findByCustomerId(booking.getCustomerId());
-        if (vipMember != null && vipMember.isActive()) {
-            double discount = baseAmount * (vipMember.getDiscountPercentage() / 100);
-            baseAmount -= discount;
-            booking.setDiscountApplied(discount);
-        }
-        
-        booking.setTotalAmount(baseAmount);
-        return baseAmount;
-    }
-    
-    public void processCheckIn(long bookingId) throws SQLException {
-        Booking booking = bookingDAO.findById(bookingId);
-        if (booking == null) {
-            throw new SQLException("Booking not found");
-        }
-        
-        if (!"CONFIRMED".equals(booking.getBookingStatus())) {
-            throw new SQLException("Booking is not in confirmed status");
-        }
-        
-        // Check if customer is blacklisted
-        if (blacklistedCustomerDAO.isCustomerBlacklisted(booking.getCustomerId())) {
-            throw new SQLException("Cannot check in blacklisted customer");
-        }
-        
-        booking.setBookingStatus("CHECKED_IN");
-        bookingDAO.update(booking);
-        
-        // Update room status
-        roomDAO.updateRoomStatus(booking.getRoomId(), "OCCUPIED");
-    }
-    
-    public void processCheckOut(long bookingId, Date actualCheckoutDate) throws SQLException {
-        Booking booking = bookingDAO.findById(bookingId);
-        if (booking == null) {
-            throw new SQLException("Booking not found");
-        }
-        
-        if (!"CHECKED_IN".equals(booking.getBookingStatus())) {
-            throw new SQLException("Booking is not checked in");
-        }
-        
-        // Calculate extra charges for late checkout
-        if (actualCheckoutDate.after(booking.getCheckOutDate())) {
-            long hoursLate = (actualCheckoutDate.getTime() - booking.getCheckOutDate().getTime()) / (60 * 60 * 1000);
-            double extraCharge = Math.max(1, hoursLate) * 25.0; // $25 per hour
-            booking.setExtraCharges(booking.getExtraCharges() + extraCharge);
-            booking.setTotalAmount(booking.getTotalAmount() + extraCharge);
-        }
-        
-        booking.setBookingStatus("CHECKED_OUT");
-        bookingDAO.update(booking);
-        
-        // Update room status to maintenance (needs cleaning)
-        roomDAO.updateRoomStatus(booking.getRoomId(), "MAINTENANCE");
-        
-        // Update customer total spent
-        Customer customer = customerDAO.findById(booking.getCustomerId());
-        if (customer != null) {
-            customer.setTotalSpent(customer.getTotalSpent() + booking.getTotalAmount());
-            customerDAO.update(customer);
-        }
+    public double getOccupancyRate() throws SQLException {
+        int totalRooms = getTotalRoomsCount();
+        int occupiedRooms = getOccupiedRoomsCount();
+
+        if (totalRooms == 0) return 0.0;
+        return (double) occupiedRooms / totalRooms * 100.0;
     }
     
     // ==================== UTILITY METHODS ====================
-    
-    public boolean isServiceAvailableForRoom(int roomId, int serviceId) throws SQLException {
-        return roomServiceDAO.isServiceAvailableForRoom(roomId, serviceId);
+
+    public Customer findCustomerByID(int customerId) throws SQLException {
+        return customerDAO.findById(customerId);
+    }
+
+    public boolean deleteCustomer(int customerId) throws SQLException {
+        try {
+            customerDAO.delete(customerId);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
     
-    public List<String> getServiceCategories() throws SQLException {
-        return roomServiceDAO.getServiceCategories();
+    public Room getRoomById(int roomId) throws SQLException {
+        return roomDAO.findById(roomId);
+    }
+
+    public boolean updateRoom(Room room) throws SQLException {
+        try {
+            roomDAO.update(room);
+            return true;
+        } catch (SQLException e) {
+            return false;
+        }
     }
     
-    // ==================== COMPREHENSIVE REPORTING ====================
+    public List<Booking> searchBookings(String searchTerm) throws SQLException {
+        // Implementation would depend on BookingDAO having a search method
+        return bookingDAO.getAll(); // Placeholder - would need to implement search in BookingDAO
+    }
     
-    public Object[] getSystemStatistics() throws SQLException {
-        List<Customer> allCustomers = customerDAO.findAll();
-        List<VIPMember> vipMembers = vipMemberDAO.findAll();
+    public void generateReports() throws SQLException {
+        // Placeholder for report generation functionality
+        // Could generate various reports based on the data
+    }
+
+    // ==================== ADDITIONAL MISSING METHODS ====================
+
+    // Invoice Management Methods
+    public List<Invoice> getBookingInvoices(int bookingId) throws SQLException {
+        return invoiceDAO.findByBookingId(bookingId);
+    }
+
+    public Invoice generateInvoice(int bookingId, double taxRate, String createdBy) throws SQLException {
+        Booking booking = bookingDAO.findById(bookingId);
+        if (booking == null) {
+            throw new SQLException("Booking not found");
+        }
+
+        Invoice invoice = new Invoice();
+        invoice.setBookingId(booking.getBookingId());
+        invoice.setCustomerId(booking.getCustomerId());
+        invoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
+        invoice.setInvoiceDate(new Date());
+
+        // Calculate amounts
+        double subtotal = booking.getTotalAmount();
+        double taxAmount = subtotal * (taxRate / 100);
+        double totalAmount = subtotal + taxAmount;
+
+        invoice.setSubtotal(subtotal);
+        invoice.setTaxAmount(taxAmount);
+        invoice.setTotalAmount(totalAmount);
+        invoice.setPaymentStatus(Invoice.PaymentStatus.PENDING);
+
+        return invoiceDAO.create(invoice);
+    }
+
+    public void updateInvoicePaymentStatus(int invoiceId, Invoice.PaymentStatus paymentStatus,
+                                         Date paymentDate, String paymentMethod) throws SQLException {
+        invoiceDAO.updatePaymentStatus((long)invoiceId, paymentStatus, (java.sql.Date) paymentDate, paymentMethod);
+    }
+
+    public Invoice getInvoiceByNumber(String invoiceNumber) throws SQLException {
+        return invoiceDAO.findByInvoiceNumber(invoiceNumber);
+    }
+
+    public List<Invoice> getPendingInvoices() throws SQLException {
+        return invoiceDAO.findByPaymentStatus(Invoice.PaymentStatus.PENDING);
+    }
+
+    public List<Invoice> getOverdueInvoices() throws SQLException {
+        return invoiceDAO.findOverdueInvoices();
+    }
+
+    public double getPendingPaymentAmount() throws SQLException {
+        List<Invoice> pendingInvoices = getPendingInvoices();
+        return pendingInvoices.stream()
+                .mapToDouble(Invoice::getTotalAmount)
+                .sum();
+    }
+
+    // VIP Member Methods
+    public VIPMember getCustomerVIPStatus(int customerId) throws SQLException {
+        return vipMemberDAO.findByCustomerId(customerId);
+    }
+
+    public List<VIPMember> getVIPMembersDetailed(VIPMember.MembershipLevel level) throws SQLException {
+        if (level == null) {
+            return vipMemberDAO.findAllWithDetails();
+        } else {
+            return vipMemberDAO.findByMembershipLevelWithDetails(level);
+        }
+    }
+
+    public VIPMember promoteToVIP(int customerId, VIPMember.MembershipLevel level) throws SQLException {
+        Customer customer = customerDAO.findById(customerId);
+        if (customer == null) {
+            throw new SQLException("Customer not found");
+        }
+
+        VIPMember vipMember = new VIPMember();
+        vipMember.setCustomerId(customerId);
+        vipMember.setMembershipLevel(level);
+        vipMember.setJoinDate(new Date());
+        vipMember.setDiscountPercentage(VIPMember.getDefaultDiscountForLevel(level));
+        vipMember.setBenefits(VIPMember.getDefaultBenefitsForLevel(level));
+        vipMember.setActive(true);
+
+        int vipId = vipMemberDAO.createVIPMember(vipMember);
+        vipMember.setVipId(vipId);
+
+        return vipMember;
+    }
+
+    // Customer Methods
+    public List<Booking> getCustomerBookingHistory(int customerId) throws SQLException {
+        return bookingDAO.findByCustomerId(customerId);
+    }
+
+    public List<Customer> getVIPEligibleCustomers() throws SQLException {
+        return customerDAO.findVIPEligibleCustomers();
+    }
+
+    // Service Usage Methods
+    public List<ServiceUsage> getCustomerServiceSummary(int customerId) throws SQLException {
+        return serviceUsageDAO.getCustomerServiceSummary(customerId);
+    }
+
+    public double calculateCustomerServiceTotal(int customerId, Date fromDate) throws SQLException {
+        return serviceUsageDAO.calculateCustomerServiceTotal(customerId, fromDate);
+    }
+
+    public List<ServiceUsage> getMostPopularServices(int limit) throws SQLException {
+        return serviceUsageDAO.getMostPopularServices(limit);
+    }
+
+    // Room and Reports Methods
+    public double getRoomOccupancyRate(Date startDate, Date endDate) throws SQLException {
         List<Room> allRooms = roomDAO.findAll();
-        List<Room> availableRooms = roomDAO.findAvailableRooms();
-        List<Booking> currentReservations = getCurrentReservations();
-        List<Booking> expiredReservations = getExpiredReservations();
-        int activeBlacklist = getActiveBlacklistCount();
-        double totalRevenue = getTotalRevenue();
-        double pendingPayments = getPendingPaymentAmount();
-        
-        return new Object[]{
-            allCustomers.size(),           // Total customers
-            vipMembers.size(),            // Total VIP members
-            allRooms.size(),              // Total rooms
-            availableRooms.size(),        // Available rooms
-            currentReservations.size(),   // Current reservations
-            expiredReservations.size(),   // Expired reservations
-            activeBlacklist,              // Active blacklisted customers
-            totalRevenue,                 // Total revenue
-            pendingPayments               // Pending payments
+        if (allRooms.isEmpty()) return 0.0;
+
+        int totalRooms = allRooms.size();
+        long daysBetween = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+        long totalRoomDays = totalRooms * daysBetween;
+
+        List<Booking> bookings = bookingDAO.getBookingsByDateRange(startDate, endDate);
+        long occupiedRoomDays = 0;
+
+        for (Booking booking : bookings) {
+            if (booking.getCheckInDate() != null && booking.getCheckOutDate() != null) {
+                long bookingDays = (booking.getCheckOutDate().getTime() - booking.getCheckInDate().getTime()) / (1000 * 60 * 60 * 24);
+                occupiedRoomDays += bookingDays;
+            }
+        }
+
+        return totalRoomDays > 0 ? (double) occupiedRoomDays / totalRoomDays * 100.0 : 0.0;
+    }
+
+    public Object[] getSystemStatistics() throws SQLException {
+        return new Object[] {
+            getTotalCustomersCount(),
+            getTotalVIPMembersCount(),
+            getCurrentReservationsCount(),
+            getAvailableRoomsCount(),
+            getOccupiedRoomsCount(),
+            String.format("%.1f%%", getOccupancyRate()),
+            getPendingPaymentAmount(),
+            getTotalRevenue(new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000), new Date()) // Last 30 days
         };
     }
-    
-    public String generateSystemReport() throws SQLException {
-        Object[] stats = getSystemStatistics();
-        StringBuilder report = new StringBuilder();
-        
-        report.append("=== HOTEL MANAGEMENT SYSTEM REPORT ===\n");
-        report.append("Generated on: ").append(new Date()).append("\n\n");
-        
-        report.append("CUSTOMER STATISTICS:\n");
-        report.append("- Total Customers: ").append(stats[0]).append("\n");
-        report.append("- VIP Members: ").append(stats[1]).append("\n");
-        report.append("- Blacklisted Customers: ").append(stats[6]).append("\n\n");
-        
-        report.append("ROOM STATISTICS:\n");
-        report.append("- Total Rooms: ").append(stats[2]).append("\n");
-        report.append("- Available Rooms: ").append(stats[3]).append("\n");
-        report.append("- Occupancy Rate: ").append(
-            String.format("%.1f%%", 
-                ((Integer)stats[2] - (Integer)stats[3]) * 100.0 / (Integer)stats[2])
-        ).append("\n\n");
-        
-        report.append("BOOKING STATISTICS:\n");
-        report.append("- Current Reservations: ").append(stats[4]).append("\n");
-        report.append("- Expired Reservations: ").append(stats[5]).append("\n\n");
-        
-        report.append("FINANCIAL STATISTICS:\n");
-        report.append("- Total Revenue: $").append(String.format("%.2f", stats[7])).append("\n");
-        report.append("- Pending Payments: $").append(String.format("%.2f", stats[8])).append("\n");
-        
-        return report.toString();
-    }
 }
-

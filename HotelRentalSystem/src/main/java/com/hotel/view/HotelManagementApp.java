@@ -2,6 +2,7 @@ package com.hotel.view;
 
 import com.hotel.model.EnhancedHotelManagementService;
 import com.hotel.util.DatabaseConnection;
+import com.hotel.view.panels.*;
 
 import javax.swing.*;
 import java.awt.*;
@@ -9,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 
 /**
  * Main application window for Hotel Management System
@@ -26,7 +28,6 @@ public class HotelManagementApp extends JFrame {
     private RoomManagementPanel roomPanel;
     private VIPMemberPanel vipPanel;
     private ServiceManagementPanel servicePanel;
-    private BlacklistManagementPanel blacklistPanel;
     private InvoiceManagementPanel invoicePanel;
     private ReportsPanel reportsPanel;
     
@@ -66,7 +67,7 @@ public class HotelManagementApp extends JFrame {
         
         // Set look and feel
         try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeel());
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             System.err.println("Could not set look and feel: " + e.getMessage());
         }
@@ -148,7 +149,6 @@ public class HotelManagementApp extends JFrame {
         roomPanel = new RoomManagementPanel(hotelService);
         vipPanel = new VIPMemberPanel(hotelService);
         servicePanel = new ServiceManagementPanel();
-        blacklistPanel = new BlacklistManagementPanel();
         invoicePanel = new InvoiceManagementPanel();
         reportsPanel = new ReportsPanel(hotelService);
         
@@ -159,7 +159,6 @@ public class HotelManagementApp extends JFrame {
         tabbedPane.addTab("Rooms", new ImageIcon(), roomPanel, "Room Management");
         tabbedPane.addTab("VIP Members", new ImageIcon(), vipPanel, "VIP Member Management");
         tabbedPane.addTab("Services", new ImageIcon(), servicePanel, "Room Service Management");
-        tabbedPane.addTab("Blacklist", new ImageIcon(), blacklistPanel, "Blacklist Management");
         tabbedPane.addTab("Invoices", new ImageIcon(), invoicePanel, "Invoice Management");
         tabbedPane.addTab("Reports", new ImageIcon(), reportsPanel, "Reports and Analytics");
         
@@ -379,12 +378,5 @@ public class HotelManagementApp extends JFrame {
             }
         });
     }
-}
-
-/**
- * Interface for panels that can be refreshed
- */
-interface RefreshablePanel {
-    void refreshData();
 }
 

@@ -236,6 +236,83 @@ public class RoomServiceDAO {
         return categories;
     }
     
+    // Create new service
+    public void create(RoomService service) throws SQLException {
+        String sql = "INSERT INTO room_services (service_id, service_name, service_description, " +
+                    "service_category, base_price, is_active) " +
+                    "VALUES (room_service_seq.NEXTVAL, ?, ?, ?, ?, 'Y')";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, service.getServiceName());
+            pstmt.setString(2, service.getServiceDescription());
+            pstmt.setString(3, service.getServiceCategoryString());
+            pstmt.setDouble(4, service.getBasePrice());
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    // Find active services (alternative method)
+    public List<RoomService> findActive() throws SQLException {
+        String sql = "SELECT * FROM room_services WHERE is_active = 'Y'";
+        List<RoomService> services = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                services.add(mapResultSetToRoomService(rs));
+            }
+        }
+        return services;
+    }
+
+    // Find services by room type (alternative method)
+    public List<RoomService> findByRoomType(int roomTypeId) throws SQLException {
+        String sql = "SELECT rs.* FROM room_services rs " +
+                    "JOIN room_type_services rts ON rs.service_id = rts.service_id " +
+                    "WHERE rts.room_type_id = ? AND rs.is_active = 'Y'";
+        List<RoomService> services = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, roomTypeId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    services.add(mapResultSetToRoomService(rs));
+                }
+            }
+        }
+        return services;
+    }
+
+    // Search services by term (alternative method)
+    public List<RoomService> search(String searchTerm) throws SQLException {
+        String sql = "SELECT * FROM room_services WHERE is_active = 'Y' AND " +
+                    "(LOWER(service_name) LIKE ? OR LOWER(service_description) LIKE ?)";
+        List<RoomService> services = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            String pattern = "%" + searchTerm.toLowerCase() + "%";
+            pstmt.setString(1, pattern);
+            pstmt.setString(2, pattern);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    services.add(mapResultSetToRoomService(rs));
+                }
+            }
+        }
+        return services;
+    }
+
     // Helper method to map ResultSet to RoomService object
     private RoomService mapResultSetToRoomService(ResultSet rs) throws SQLException {
         RoomService service = new RoomService();
@@ -249,4 +326,3 @@ public class RoomServiceDAO {
         return service;
     }
 }
-

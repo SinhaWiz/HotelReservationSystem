@@ -1,7 +1,7 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
-import com.hotel.service.EnhancedHotelManagementService;
+import com.hotel.model.EnhancedHotelManagementService;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;

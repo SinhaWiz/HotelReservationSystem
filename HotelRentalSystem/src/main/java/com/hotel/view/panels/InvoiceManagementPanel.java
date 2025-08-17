@@ -1,7 +1,7 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
-import com.hotel.service.EnhancedHotelManagementService;
+import com.hotel.model.EnhancedHotelManagementService;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -359,7 +359,7 @@ public class InvoiceManagementPanel extends JPanel {
             for (Booking booking : bookings) {
                 // Only show checked-out bookings that don't have invoices yet
                 if ("CHECKED_OUT".equals(booking.getBookingStatus())) {
-                    List<Invoice> existingInvoices = hotelService.getBookingInvoices(booking.getBookingId());
+                    List<Invoice> existingInvoices = hotelService.getBookingInvoices((int) booking.getBookingId());
                     if (existingInvoices.isEmpty()) {
                         Customer customer = hotelService.getCustomer(booking.getCustomerId());
                         String displayText = String.format("Booking %d - %s (Room %d) - $%.2f", 
@@ -386,7 +386,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         try {
             long bookingId = Long.parseLong(selectedBooking.split(" - ")[0].replace("Booking ", ""));
-            Booking booking = hotelService.getBooking(bookingId);
+            Booking booking = hotelService.getBooking((int) bookingId);
             
             if (booking != null) {
                 Customer customer = hotelService.getCustomer(booking.getCustomerId());
@@ -445,7 +445,7 @@ public class InvoiceManagementPanel extends JPanel {
                 return;
             }
             
-            Invoice invoice = hotelService.generateInvoice(bookingId, taxRate, createdBy);
+            Invoice invoice = hotelService.generateInvoice((int) bookingId, taxRate, createdBy);
             
             showSuccess("Invoice generated successfully!\nInvoice Number: " + invoice.getInvoiceNumber() +
                        "\nTotal Amount: " + invoice.getFormattedTotalAmount());
@@ -472,7 +472,7 @@ public class InvoiceManagementPanel extends JPanel {
             long bookingId = Long.parseLong(selectedBooking.split(" - ")[0].replace("Booking ", ""));
             double taxRate = Double.parseDouble(taxRateField.getText().trim()) / 100.0;
             
-            Booking booking = hotelService.getBooking(bookingId);
+            Booking booking = hotelService.getBooking((int) bookingId);
             Customer customer = hotelService.getCustomer(booking.getCustomerId());
             List<ServiceUsage> serviceUsage = hotelService.getBookingServiceUsage(bookingId);
             
@@ -519,7 +519,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         try {
             long invoiceId = (Long) invoicesTableModel.getValueAt(selectedRow, 0);
-            Invoice invoice = hotelService.getInvoice(invoiceId);
+            Invoice invoice = hotelService.getInvoice((int) invoiceId);
             
             lineItemsTableModel.setRowCount(0);
             
@@ -527,7 +527,7 @@ public class InvoiceManagementPanel extends JPanel {
                 for (InvoiceLineItem lineItem : invoice.getLineItems()) {
                     Object[] row = {
                         lineItem.getLineItemId(),
-                        lineItem.getItemType(),
+                        lineItem.getItemTypeString(),
                         lineItem.getItemDescription(),
                         lineItem.getQuantity(),
                         lineItem.getFormattedUnitPrice(),
@@ -575,7 +575,7 @@ public class InvoiceManagementPanel extends JPanel {
                 paymentDate = new Date();
             }
             
-            hotelService.updateInvoicePaymentStatus(invoiceId, paymentStatus, paymentDate, paymentMethod);
+            hotelService.updateInvoicePaymentStatus((int) invoiceId, paymentStatus, paymentDate, paymentMethod);
             
             showSuccess("Payment status updated successfully!");
             loadInvoicesData();
@@ -689,11 +689,15 @@ public class InvoiceManagementPanel extends JPanel {
     
     private void updateFinancialSummary() {
         try {
-            double totalRevenue = hotelService.getTotalRevenue();
+            // Calculate revenue for the last 30 days
+            Date endDate = new Date();
+            Date startDate = new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
+
+            double totalRevenue = hotelService.getTotalRevenue(startDate, endDate);
             double pendingPayments = hotelService.getPendingPaymentAmount();
             
             financialSummaryLabel.setText(String.format(
-                "Financial Summary - Total Revenue: $%.2f | Pending Payments: $%.2f", 
+                "Financial Summary - Total Revenue (Last 30 days): $%.2f | Pending Payments: $%.2f",
                 totalRevenue, pendingPayments));
             
         } catch (SQLException e) {
@@ -708,10 +712,14 @@ public class InvoiceManagementPanel extends JPanel {
         report.append("==============\n");
         report.append("Generated on: ").append(new Date()).append("\n\n");
         
-        double totalRevenue = hotelService.getTotalRevenue();
+        // Calculate revenue for the last 30 days
+        Date endDate = new Date();
+        Date startDate = new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
+
+        double totalRevenue = hotelService.getTotalRevenue(startDate, endDate);
         double pendingPayments = hotelService.getPendingPaymentAmount();
         
-        report.append("FINANCIAL SUMMARY:\n");
+        report.append("FINANCIAL SUMMARY (Last 30 days):\n");
         report.append("- Total Revenue (Paid): $").append(String.format("%.2f", totalRevenue)).append("\n");
         report.append("- Pending Payments: $").append(String.format("%.2f", pendingPayments)).append("\n");
         report.append("- Total Outstanding: $").append(String.format("%.2f", totalRevenue + pendingPayments)).append("\n\n");

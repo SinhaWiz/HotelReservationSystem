@@ -112,6 +112,10 @@ public class RoomService {
         return serviceName + " (" + getFormattedPrice() + ")";
     }
     
+    public double getPrice() {
+        return this.basePrice;
+    }
+
     @Override
     public String toString() {
         return "RoomService{" +
@@ -137,4 +141,3 @@ public class RoomService {
         return Integer.hashCode(serviceId);
     }
 }
-

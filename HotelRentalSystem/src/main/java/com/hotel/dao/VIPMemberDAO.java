@@ -344,6 +344,102 @@ public class VIPMemberDAO {
     }
     
     /**
+     * Find all VIP members
+     */
+    public List<VIPMember> findAll() throws SQLException {
+        String sql = "SELECT v.*, c.* FROM vip_members v " +
+                    "JOIN customers c ON v.customer_id = c.customer_id " +
+                    "WHERE v.is_active = 'Y'";
+        List<VIPMember> members = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                members.add(mapResultSetToVIPMember(rs));
+            }
+        }
+        return members;
+    }
+
+    /**
+     * Update VIP member information (overloaded)
+     */
+    public void update(VIPMember member) throws SQLException {
+        String sql = "UPDATE vip_members SET membership_level = ?, discount_percentage = ?, " +
+                    "membership_end_date = ?, benefits = ?, is_active = ? WHERE vip_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, member.getMembershipLevel().name());
+            pstmt.setDouble(2, member.getDiscountPercentage());
+            pstmt.setDate(3, new java.sql.Date(member.getMembershipEndDate().getTime()));
+            pstmt.setString(4, member.getBenefits());
+            pstmt.setString(5, member.isActive() ? "Y" : "N");
+            pstmt.setInt(6, member.getVipId());
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Save VIP member (insert or update)
+     */
+    public void save(VIPMember member) throws SQLException {
+        if (member.getVipId() == 0) {
+            createVIPMember(member);
+        } else {
+            update(member);
+        }
+    }
+
+    /**
+     * Get VIP members by membership level with details
+     */
+    public List<VIPMember> findByLevelWithDetails(VIPMember.MembershipLevel level) throws SQLException {
+        String sql = "SELECT v.*, c.* FROM vip_members v " +
+                    "JOIN customers c ON v.customer_id = c.customer_id " +
+                    "WHERE v.is_active = 'Y' AND v.membership_level = ?";
+        List<VIPMember> members = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, level.name());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    members.add(mapResultSetToVIPMember(rs));
+                }
+            }
+        }
+        return members;
+    }
+
+    /**
+     * Get all active VIP members with additional details
+     */
+    public List<VIPMember> findAllWithDetails() throws SQLException {
+        String sql = "SELECT v.*, c.*, " +
+                    "(SELECT COUNT(*) FROM bookings b WHERE b.customer_id = c.customer_id) as booking_count " +
+                    "FROM vip_members v " +
+                    "JOIN customers c ON v.customer_id = c.customer_id " +
+                    "WHERE v.is_active = 'Y'";
+        List<VIPMember> members = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                members.add(mapResultSetToVIPMemberWithDetails(rs));
+            }
+        }
+        return members;
+    }
+
+    /**
      * Map ResultSet to VIPMember object
      */
     private VIPMember mapResultSetToVIPMember(ResultSet rs) throws SQLException {
@@ -420,5 +516,61 @@ public class VIPMemberDAO {
         
         return vipMember;
     }
-}
 
+    /**
+     * Map ResultSet to VIPMember object with additional details (e.g., booking count)
+     */
+    private VIPMember mapResultSetToVIPMemberWithDetails(ResultSet rs) throws SQLException {
+        VIPMember member = mapResultSetToVIPMember(rs);
+        member.setBookingCount(rs.getInt("booking_count"));
+        return member;
+    }
+
+    /**
+     * Promote top customers to VIP status using stored procedure
+     */
+    public void promoteTopCustomersToVIP(String promotedBy) throws SQLException {
+        String sql = "{call promote_top_customers_to_vip(?)}";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             CallableStatement cstmt = conn.prepareCall(sql)) {
+
+            cstmt.setString(1, promotedBy);
+            cstmt.execute();
+        }
+    }
+
+    // ==================== MISSING METHODS ====================
+
+    /**
+     * Find VIP members by membership level with detailed information
+     */
+    public List<VIPMember> findByMembershipLevelWithDetails(VIPMember.MembershipLevel level) throws SQLException {
+        String sql = "SELECT vm.vip_id, vm.customer_id, vm.membership_level, " +
+                    "vm.discount_percentage, vm.membership_start_date, vm.membership_end_date, " +
+                    "vm.benefits, vm.is_active, " +
+                    "c.first_name, c.last_name, c.email, c.phone, c.total_spent, c.loyalty_points, " +
+                    "(SELECT COUNT(*) FROM bookings b WHERE b.customer_id = c.customer_id) as booking_count " +
+                    "FROM vip_members vm " +
+                    "JOIN customers c ON vm.customer_id = c.customer_id " +
+                    "WHERE vm.membership_level = ? AND vm.is_active = 'Y' " +
+                    "ORDER BY c.total_spent DESC";
+
+        List<VIPMember> vipMembers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, level.toString());
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    VIPMember member = mapResultSetToVIPMember(rs);
+                    member.setBookingCount(rs.getInt("booking_count"));
+                    vipMembers.add(member);
+                }
+            }
+        }
+        return vipMembers;
+    }
+}
