@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * Enhanced service class for hotel management operations with new features
- * Includes room services, blacklist management, invoice generation, and more
+ * Includes room services, invoice generation, and more
  */
 public class EnhancedHotelManagementService {
     private final CustomerDAO customerDAO;
@@ -18,7 +18,6 @@ public class EnhancedHotelManagementService {
     private final VIPMemberDAO vipMemberDAO;
     private final RoomServiceDAO roomServiceDAO;
     private final ServiceUsageDAO serviceUsageDAO;
-    private final BlacklistedCustomerDAO blacklistedCustomerDAO;
     private final InvoiceDAO invoiceDAO;
 
     public EnhancedHotelManagementService() {
@@ -28,17 +27,12 @@ public class EnhancedHotelManagementService {
         this.vipMemberDAO = new VIPMemberDAO();
         this.roomServiceDAO = new RoomServiceDAO();
         this.serviceUsageDAO = new ServiceUsageDAO();
-        this.blacklistedCustomerDAO = new BlacklistedCustomerDAO();
         this.invoiceDAO = new InvoiceDAO();
     }
 
     // ==================== ENHANCED CUSTOMER MANAGEMENT ====================
     
     public Customer createCustomer(Customer customer) throws SQLException {
-        // Check if customer is blacklisted before creating
-        if (blacklistedCustomerDAO.isCustomerBlacklisted(customer.getCustomerId())) {
-            throw new SQLException("Cannot create booking for blacklisted customer");
-        }
         customerDAO.save(customer);
         return customer;
     }
@@ -82,11 +76,6 @@ public class EnhancedHotelManagementService {
     // ==================== ENHANCED BOOKING MANAGEMENT ====================
     
     public Booking createBooking(Booking booking) throws SQLException {
-        // Validate customer is not blacklisted
-        if (blacklistedCustomerDAO.isCustomerBlacklisted(booking.getCustomerId())) {
-            throw new SQLException("Customer is blacklisted");
-        }
-
         // Check room availability
         if (!isRoomAvailable(booking.getRoomId(), booking.getCheckInDate(), booking.getCheckOutDate())) {
             throw new SQLException("Room is not available for the selected dates");
@@ -277,29 +266,6 @@ public class EnhancedHotelManagementService {
         return serviceUsageDAO.findByBookingId(bookingId);
     }
     
-    // ==================== BLACKLIST MANAGEMENT ====================
-    
-    public void blacklistCustomer(int customerId, String reason, String blacklistedBy, Date expiryDate) throws SQLException {
-        java.sql.Date sqlDate = expiryDate != null ? new java.sql.Date(expiryDate.getTime()) : null;
-        blacklistedCustomerDAO.create(customerId, reason, blacklistedBy, sqlDate);
-    }
-    
-    public void removeFromBlacklist(int customerId, String removedBy) throws SQLException {
-        blacklistedCustomerDAO.remove(customerId, removedBy);
-    }
-    
-    public boolean isCustomerBlacklisted(int customerId) throws SQLException {
-        return blacklistedCustomerDAO.isCustomerBlacklisted(customerId);
-    }
-    
-    public List<BlacklistedCustomer> getAllBlacklistedCustomers() throws SQLException {
-        return blacklistedCustomerDAO.findAll();
-    }
-    
-    public List<BlacklistedCustomer> getActiveBlacklistedCustomers() throws SQLException {
-        return blacklistedCustomerDAO.findActiveBlacklistedCustomers();
-    }
-    
     // ==================== VIP MEMBER MANAGEMENT ====================
 
     public VIPMember createVIPMember(VIPMember vipMember) throws SQLException {
@@ -371,13 +337,13 @@ public class EnhancedHotelManagementService {
     }
 
     public List<Invoice> getInvoicesByDateRange(Date startDate, Date endDate) throws SQLException {
-        return invoiceDAO.findByDateRange(startDate, endDate);
+        return invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
     }
 
     // ==================== REPORTING AND ANALYTICS ====================
 
     public double getTotalRevenue(Date startDate, Date endDate) throws SQLException {
-        List<Invoice> invoices = invoiceDAO.findByDateRange(startDate, endDate);
+        List<Invoice> invoices = invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
         return invoices.stream()
                 .filter(invoice -> invoice.getPaymentStatus() == Invoice.PaymentStatus.PAID)
                 .mapToDouble(Invoice::getTotalAmount)
@@ -455,5 +421,151 @@ public class EnhancedHotelManagementService {
     public void generateReports() throws SQLException {
         // Placeholder for report generation functionality
         // Could generate various reports based on the data
+    }
+
+    // ==================== ADDITIONAL MISSING METHODS ====================
+
+    // Invoice Management Methods
+    public List<Invoice> getBookingInvoices(int bookingId) throws SQLException {
+        return invoiceDAO.findByBookingId(bookingId);
+    }
+
+    public Invoice generateInvoice(int bookingId, double taxRate, String createdBy) throws SQLException {
+        Booking booking = bookingDAO.findById(bookingId);
+        if (booking == null) {
+            throw new SQLException("Booking not found");
+        }
+
+        Invoice invoice = new Invoice();
+        invoice.setBookingId(booking.getBookingId());
+        invoice.setCustomerId(booking.getCustomerId());
+        invoice.setInvoiceNumber("INV-" + System.currentTimeMillis());
+        invoice.setInvoiceDate(new Date());
+
+        // Calculate amounts
+        double subtotal = booking.getTotalAmount();
+        double taxAmount = subtotal * (taxRate / 100);
+        double totalAmount = subtotal + taxAmount;
+
+        invoice.setSubtotal(subtotal);
+        invoice.setTaxAmount(taxAmount);
+        invoice.setTotalAmount(totalAmount);
+        invoice.setPaymentStatus(Invoice.PaymentStatus.PENDING);
+
+        return invoiceDAO.create(invoice);
+    }
+
+    public void updateInvoicePaymentStatus(int invoiceId, Invoice.PaymentStatus paymentStatus,
+                                         Date paymentDate, String paymentMethod) throws SQLException {
+        invoiceDAO.updatePaymentStatus((long)invoiceId, paymentStatus, (java.sql.Date) paymentDate, paymentMethod);
+    }
+
+    public Invoice getInvoiceByNumber(String invoiceNumber) throws SQLException {
+        return invoiceDAO.findByInvoiceNumber(invoiceNumber);
+    }
+
+    public List<Invoice> getPendingInvoices() throws SQLException {
+        return invoiceDAO.findByPaymentStatus(Invoice.PaymentStatus.PENDING);
+    }
+
+    public List<Invoice> getOverdueInvoices() throws SQLException {
+        return invoiceDAO.findOverdueInvoices();
+    }
+
+    public double getPendingPaymentAmount() throws SQLException {
+        List<Invoice> pendingInvoices = getPendingInvoices();
+        return pendingInvoices.stream()
+                .mapToDouble(Invoice::getTotalAmount)
+                .sum();
+    }
+
+    // VIP Member Methods
+    public VIPMember getCustomerVIPStatus(int customerId) throws SQLException {
+        return vipMemberDAO.findByCustomerId(customerId);
+    }
+
+    public List<VIPMember> getVIPMembersDetailed(VIPMember.MembershipLevel level) throws SQLException {
+        if (level == null) {
+            return vipMemberDAO.findAllWithDetails();
+        } else {
+            return vipMemberDAO.findByMembershipLevelWithDetails(level);
+        }
+    }
+
+    public VIPMember promoteToVIP(int customerId, VIPMember.MembershipLevel level) throws SQLException {
+        Customer customer = customerDAO.findById(customerId);
+        if (customer == null) {
+            throw new SQLException("Customer not found");
+        }
+
+        VIPMember vipMember = new VIPMember();
+        vipMember.setCustomerId(customerId);
+        vipMember.setMembershipLevel(level);
+        vipMember.setJoinDate(new Date());
+        vipMember.setDiscountPercentage(VIPMember.getDefaultDiscountForLevel(level));
+        vipMember.setBenefits(VIPMember.getDefaultBenefitsForLevel(level));
+        vipMember.setActive(true);
+
+        int vipId = vipMemberDAO.createVIPMember(vipMember);
+        vipMember.setVipId(vipId);
+
+        return vipMember;
+    }
+
+    // Customer Methods
+    public List<Booking> getCustomerBookingHistory(int customerId) throws SQLException {
+        return bookingDAO.findByCustomerId(customerId);
+    }
+
+    public List<Customer> getVIPEligibleCustomers() throws SQLException {
+        return customerDAO.findVIPEligibleCustomers();
+    }
+
+    // Service Usage Methods
+    public List<ServiceUsage> getCustomerServiceSummary(int customerId) throws SQLException {
+        return serviceUsageDAO.getCustomerServiceSummary(customerId);
+    }
+
+    public double calculateCustomerServiceTotal(int customerId, Date fromDate) throws SQLException {
+        return serviceUsageDAO.calculateCustomerServiceTotal(customerId, fromDate);
+    }
+
+    public List<ServiceUsage> getMostPopularServices(int limit) throws SQLException {
+        return serviceUsageDAO.getMostPopularServices(limit);
+    }
+
+    // Room and Reports Methods
+    public double getRoomOccupancyRate(Date startDate, Date endDate) throws SQLException {
+        List<Room> allRooms = roomDAO.findAll();
+        if (allRooms.isEmpty()) return 0.0;
+
+        int totalRooms = allRooms.size();
+        long daysBetween = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+        long totalRoomDays = totalRooms * daysBetween;
+
+        List<Booking> bookings = bookingDAO.getBookingsByDateRange(startDate, endDate);
+        long occupiedRoomDays = 0;
+
+        for (Booking booking : bookings) {
+            if (booking.getCheckInDate() != null && booking.getCheckOutDate() != null) {
+                long bookingDays = (booking.getCheckOutDate().getTime() - booking.getCheckInDate().getTime()) / (1000 * 60 * 60 * 24);
+                occupiedRoomDays += bookingDays;
+            }
+        }
+
+        return totalRoomDays > 0 ? (double) occupiedRoomDays / totalRoomDays * 100.0 : 0.0;
+    }
+
+    public Object[] getSystemStatistics() throws SQLException {
+        return new Object[] {
+            getTotalCustomersCount(),
+            getTotalVIPMembersCount(),
+            getCurrentReservationsCount(),
+            getAvailableRoomsCount(),
+            getOccupiedRoomsCount(),
+            String.format("%.1f%%", getOccupancyRate()),
+            getPendingPaymentAmount(),
+            getTotalRevenue(new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000), new Date()) // Last 30 days
+        };
     }
 }

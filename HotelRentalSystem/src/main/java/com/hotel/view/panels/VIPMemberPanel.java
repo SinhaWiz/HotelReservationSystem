@@ -238,7 +238,7 @@ public class VIPMemberPanel extends JPanel {
             refreshData();
         } else {
             try {
-                List<VIPMember> vipMembers = hotelService.getVIPMembersDetailed(selectedLevel);
+                List<VIPMember> vipMembers = hotelService.getVIPMembersDetailed(VIPMember.MembershipLevel.valueOf(selectedLevel));
                 populateTable(vipMembers);
                 updateStatistics(vipMembers);
             } catch (Exception e) {

@@ -395,4 +395,45 @@ public class CustomerDAO {
         }
         return customers;
     }
+
+    // ==================== MISSING METHODS ====================
+
+    /**
+     * Delete customer (hard delete method)
+     */
+    public void delete(int customerId) throws SQLException {
+        String sql = "DELETE FROM customers WHERE customer_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, customerId);
+            pstmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Find VIP eligible customers (alternative method signature)
+     */
+    public List<Customer> findVIPEligibleCustomers() throws SQLException {
+        String sql = "SELECT c.customer_id, c.first_name, c.last_name, c.email, c.phone, " +
+                    "c.address, c.date_of_birth, c.total_spent, c.registration_date, " +
+                    "c.is_active, c.loyalty_points " +
+                    "FROM customers c " +
+                    "LEFT JOIN vip_members vm ON c.customer_id = vm.customer_id AND vm.is_active = 'Y' " +
+                    "WHERE c.is_active = 'Y' AND c.total_spent >= 5000 AND vm.customer_id IS NULL " +
+                    "ORDER BY c.total_spent DESC";
+
+        List<Customer> customers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                customers.add(mapResultSetToCustomer(rs));
+            }
+        }
+        return customers;
+    }
 }

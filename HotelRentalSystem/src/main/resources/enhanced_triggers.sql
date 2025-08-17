@@ -67,38 +67,14 @@ CREATE OR REPLACE TRIGGER trg_update_vip_eligibility
     FOR EACH ROW
 BEGIN
     -- Update VIP eligibility based on spending
-    IF :NEW.total_spent >= 5000 AND :NEW.blacklist_status = 'N' THEN
-        UPDATE customers 
+    IF :NEW.total_spent >= 5000 THEN
+        UPDATE customers
         SET vip_promotion_eligible = 'Y'
         WHERE customer_id = :NEW.customer_id;
     ELSE
         UPDATE customers 
         SET vip_promotion_eligible = 'N'
         WHERE customer_id = :NEW.customer_id;
-    END IF;
-END;
-/
-
--- Trigger to prevent bookings for blacklisted customers
-CREATE OR REPLACE TRIGGER trg_prevent_blacklisted_booking
-    BEFORE INSERT OR UPDATE ON bookings
-    FOR EACH ROW
-DECLARE
-    v_is_blacklisted CHAR(1);
-    v_blacklist_reason VARCHAR2(500);
-BEGIN
-    -- Check if customer is blacklisted
-    SELECT NVL(MAX(CASE WHEN bl.is_active = 'Y' AND 
-                        (bl.expiry_date IS NULL OR bl.expiry_date > SYSDATE) 
-                   THEN 'Y' ELSE 'N' END), 'N'),
-           NVL(MAX(bl.blacklist_reason), 'N/A')
-    INTO v_is_blacklisted, v_blacklist_reason
-    FROM blacklisted_customers bl
-    WHERE bl.customer_id = :NEW.customer_id;
-    
-    IF v_is_blacklisted = 'Y' THEN
-        RAISE_APPLICATION_ERROR(-20010, 
-            'Cannot create booking for blacklisted customer. Reason: ' || v_blacklist_reason);
     END IF;
 END;
 /
@@ -347,4 +323,3 @@ END;
 /
 
 COMMIT;
-

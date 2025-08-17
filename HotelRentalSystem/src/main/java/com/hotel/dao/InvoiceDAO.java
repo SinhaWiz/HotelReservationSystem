@@ -480,4 +480,168 @@ public class InvoiceDAO {
             }
         }
     }
+
+    // ==================== MISSING METHODS ====================
+
+    // Create invoice method
+    public Invoice createInvoice(int customerId, long bookingId) throws SQLException {
+        String sql = "INSERT INTO invoices (customer_id, booking_id, invoice_number, invoice_date, " +
+                    "due_date, subtotal, tax_amount, total_amount, payment_status, created_by) " +
+                    "VALUES (?, ?, ?, SYSDATE, SYSDATE + 30, 0, 0, 0, 'PENDING', 'SYSTEM')";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setInt(1, customerId);
+            stmt.setLong(2, bookingId);
+            stmt.setString(3, "INV-" + System.currentTimeMillis());
+
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        long invoiceId = generatedKeys.getLong(1);
+                        return findById(invoiceId);
+                    }
+                }
+            }
+        }
+        throw new SQLException("Failed to create invoice");
+    }
+
+    // Create invoice with full details
+    public Invoice create(Invoice invoice) throws SQLException {
+        String sql = "INSERT INTO invoices (customer_id, booking_id, invoice_number, invoice_date, " +
+                    "due_date, subtotal, tax_amount, discount_amount, total_amount, payment_status, " +
+                    "notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setInt(1, invoice.getCustomerId());
+            stmt.setLong(2, invoice.getBookingId());
+            stmt.setString(3, invoice.getInvoiceNumber());
+            stmt.setTimestamp(4, new Timestamp(invoice.getInvoiceDate().getTime()));
+            stmt.setTimestamp(5, new Timestamp(invoice.getDueDate().getTime()));
+            stmt.setDouble(6, invoice.getSubtotal());
+            stmt.setDouble(7, invoice.getTaxAmount());
+            stmt.setDouble(8, invoice.getDiscountAmount());
+            stmt.setDouble(9, invoice.getTotalAmount());
+            stmt.setString(10, invoice.getPaymentStatusString());
+            stmt.setString(11, invoice.getNotes());
+            stmt.setString(12, invoice.getCreatedBy());
+
+            int rowsAffected = stmt.executeUpdate();
+
+            if (rowsAffected > 0) {
+                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        invoice.setInvoiceId(generatedKeys.getLong(1));
+                        return invoice;
+                    }
+                }
+            }
+        }
+        throw new SQLException("Failed to create invoice");
+    }
+
+    // Update payment status with additional parameters
+    public void updatePaymentStatus(long invoiceId, Invoice.PaymentStatus status) throws SQLException {
+        String sql = "UPDATE invoices SET payment_status = ? WHERE invoice_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, status.name());
+            stmt.setLong(2, invoiceId);
+
+            stmt.executeUpdate();
+        }
+    }
+
+    // Find invoices by payment status
+    public List<Invoice> findByPaymentStatus(Invoice.PaymentStatus status) throws SQLException {
+        String sql = "SELECT i.invoice_id, i.booking_id, i.customer_id, i.invoice_number, " +
+                    "i.invoice_date, i.due_date, i.subtotal, i.tax_amount, i.discount_amount, " +
+                    "i.total_amount, i.payment_status, i.payment_date, i.payment_method, " +
+                    "i.notes, i.created_by, " +
+                    "c.first_name, c.last_name, c.email " +
+                    "FROM invoices i " +
+                    "JOIN customers c ON i.customer_id = c.customer_id " +
+                    "WHERE i.payment_status = ? ORDER BY i.invoice_date DESC";
+
+        List<Invoice> invoices = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, status.name());
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Invoice invoice = mapResultSetToInvoice(rs);
+                    invoice.setLineItems(findLineItemsByInvoiceId(invoice.getInvoiceId()));
+                    invoices.add(invoice);
+                }
+            }
+        }
+        return invoices;
+    }
+
+    // Find unpaid invoices
+    public List<Invoice> findUnpaidInvoices() throws SQLException {
+        String sql = "SELECT i.invoice_id, i.booking_id, i.customer_id, i.invoice_number, " +
+                    "i.invoice_date, i.due_date, i.subtotal, i.tax_amount, i.discount_amount, " +
+                    "i.total_amount, i.payment_status, i.payment_date, i.payment_method, " +
+                    "i.notes, i.created_by, " +
+                    "c.first_name, c.last_name, c.email " +
+                    "FROM invoices i " +
+                    "JOIN customers c ON i.customer_id = c.customer_id " +
+                    "WHERE i.payment_status IN ('PENDING', 'OVERDUE') ORDER BY i.due_date";
+
+        List<Invoice> invoices = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Invoice invoice = mapResultSetToInvoice(rs);
+                invoice.setLineItems(findLineItemsByInvoiceId(invoice.getInvoiceId()));
+                invoices.add(invoice);
+            }
+        }
+        return invoices;
+    }
+
+    // Find invoices by date range
+    public List<Invoice> findByDateRange(Date startDate, Date endDate) throws SQLException {
+        String sql = "SELECT i.invoice_id, i.booking_id, i.customer_id, i.invoice_number, " +
+                    "i.invoice_date, i.due_date, i.subtotal, i.tax_amount, i.discount_amount, " +
+                    "i.total_amount, i.payment_status, i.payment_date, i.payment_method, " +
+                    "i.notes, i.created_by, " +
+                    "c.first_name, c.last_name, c.email " +
+                    "FROM invoices i " +
+                    "JOIN customers c ON i.customer_id = c.customer_id " +
+                    "WHERE i.invoice_date >= ? AND i.invoice_date <= ? ORDER BY i.invoice_date DESC";
+
+        List<Invoice> invoices = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
+            stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Invoice invoice = mapResultSetToInvoice(rs);
+                    invoice.setLineItems(findLineItemsByInvoiceId(invoice.getInvoiceId()));
+                    invoices.add(invoice);
+                }
+            }
+        }
+        return invoices;
+    }
 }

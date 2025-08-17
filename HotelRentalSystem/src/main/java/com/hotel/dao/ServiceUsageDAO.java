@@ -352,4 +352,36 @@ public class ServiceUsageDAO {
         usage.setNotes(rs.getString("notes"));
         return usage;
     }
+
+    // ==================== MISSING METHODS ====================
+
+    /**
+     * Calculate customer service total with date parameter (alternative signature)
+     */
+    public double calculateCustomerServiceTotal(int customerId, Date fromDate) throws SQLException {
+        String sql;
+        if (fromDate != null) {
+            sql = "SELECT NVL(SUM(total_cost), 0) FROM customer_service_usage " +
+                  "WHERE customer_id = ? AND usage_date >= ?";
+        } else {
+            sql = "SELECT NVL(SUM(total_cost), 0) FROM customer_service_usage " +
+                  "WHERE customer_id = ?";
+        }
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, customerId);
+            if (fromDate != null) {
+                stmt.setDate(2, new java.sql.Date(fromDate.getTime()));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getDouble(1);
+                }
+            }
+        }
+        return 0.0;
+    }
 }

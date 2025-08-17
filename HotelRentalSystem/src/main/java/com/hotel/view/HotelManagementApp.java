@@ -28,7 +28,6 @@ public class HotelManagementApp extends JFrame {
     private RoomManagementPanel roomPanel;
     private VIPMemberPanel vipPanel;
     private ServiceManagementPanel servicePanel;
-    private BlacklistManagementPanel blacklistPanel;
     private InvoiceManagementPanel invoicePanel;
     private ReportsPanel reportsPanel;
     
@@ -150,7 +149,6 @@ public class HotelManagementApp extends JFrame {
         roomPanel = new RoomManagementPanel(hotelService);
         vipPanel = new VIPMemberPanel(hotelService);
         servicePanel = new ServiceManagementPanel();
-        blacklistPanel = new BlacklistManagementPanel();
         invoicePanel = new InvoiceManagementPanel();
         reportsPanel = new ReportsPanel(hotelService);
         
@@ -161,7 +159,6 @@ public class HotelManagementApp extends JFrame {
         tabbedPane.addTab("Rooms", new ImageIcon(), roomPanel, "Room Management");
         tabbedPane.addTab("VIP Members", new ImageIcon(), vipPanel, "VIP Member Management");
         tabbedPane.addTab("Services", new ImageIcon(), servicePanel, "Room Service Management");
-        tabbedPane.addTab("Blacklist", new ImageIcon(), blacklistPanel, "Blacklist Management");
         tabbedPane.addTab("Invoices", new ImageIcon(), invoicePanel, "Invoice Management");
         tabbedPane.addTab("Reports", new ImageIcon(), reportsPanel, "Reports and Analytics");
         

@@ -222,4 +222,52 @@ public class VIPMember {
         return String.format("VIPMember{vipId=%d, customerId=%d, level=%s, discount=%.1f%%, active=%s}",
                 vipId, customerId, membershipLevel, discountPercentage, isActive);
     }
+
+    // ==================== MISSING STATIC METHODS ====================
+
+    /**
+     * Get default discount percentage for a membership level
+     */
+    public static double getDefaultDiscountForLevel(MembershipLevel level) {
+        switch (level) {
+            case GOLD:
+                return 10.0;
+            case PLATINUM:
+                return 15.0;
+            case DIAMOND:
+                return 20.0;
+            default:
+                return 10.0;
+        }
+    }
+
+    /**
+     * Get default benefits description for a membership level
+     */
+    public static String getDefaultBenefitsForLevel(MembershipLevel level) {
+        switch (level) {
+            case GOLD:
+                return "• Priority customer service\n" +
+                       "• 10% discount on all services\n" +
+                       "• Late checkout until 2 PM\n" +
+                       "• Welcome amenities";
+            case PLATINUM:
+                return "• All Gold benefits\n" +
+                       "• 15% discount on all services\n" +
+                       "• Room upgrade (subject to availability)\n" +
+                       "• Complimentary breakfast\n" +
+                       "• Late checkout until 4 PM\n" +
+                       "• Express check-in/check-out";
+            case DIAMOND:
+                return "• All Platinum benefits\n" +
+                       "• 20% discount on all services\n" +
+                       "• Guaranteed room upgrade\n" +
+                       "• Personal concierge service\n" +
+                       "• Complimentary airport transfer\n" +
+                       "• Late checkout until 6 PM\n" +
+                       "• Access to VIP lounge";
+            default:
+                return "Standard VIP benefits";
+        }
+    }
 }

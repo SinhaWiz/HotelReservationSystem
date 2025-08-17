@@ -1,15 +1,15 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Calendar;
 
 /**
  * Panel for managing hotel bookings
@@ -17,7 +17,7 @@ import java.util.List;
 public class BookingManagementPanel extends JPanel implements RefreshablePanel {
     
     private EnhancedHotelManagementService hotelService;
-
+    
     // Table components
     private JTable bookingsTable;
     private DefaultTableModel tableModel;
@@ -600,3 +600,4 @@ class BookingDetailsDialog extends JDialog {
         panel.add(new JLabel(value != null ? value : "N/A"), gbc);
     }
 }
+

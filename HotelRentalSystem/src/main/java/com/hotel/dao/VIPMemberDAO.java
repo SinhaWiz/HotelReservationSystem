@@ -539,4 +539,38 @@ public class VIPMemberDAO {
             cstmt.execute();
         }
     }
+
+    // ==================== MISSING METHODS ====================
+
+    /**
+     * Find VIP members by membership level with detailed information
+     */
+    public List<VIPMember> findByMembershipLevelWithDetails(VIPMember.MembershipLevel level) throws SQLException {
+        String sql = "SELECT vm.vip_id, vm.customer_id, vm.membership_level, " +
+                    "vm.discount_percentage, vm.membership_start_date, vm.membership_end_date, " +
+                    "vm.benefits, vm.is_active, " +
+                    "c.first_name, c.last_name, c.email, c.phone, c.total_spent, c.loyalty_points, " +
+                    "(SELECT COUNT(*) FROM bookings b WHERE b.customer_id = c.customer_id) as booking_count " +
+                    "FROM vip_members vm " +
+                    "JOIN customers c ON vm.customer_id = c.customer_id " +
+                    "WHERE vm.membership_level = ? AND vm.is_active = 'Y' " +
+                    "ORDER BY c.total_spent DESC";
+
+        List<VIPMember> vipMembers = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, level.toString());
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    VIPMember member = mapResultSetToVIPMember(rs);
+                    member.setBookingCount(rs.getInt("booking_count"));
+                    vipMembers.add(member);
+                }
+            }
+        }
+        return vipMembers;
+    }
 }

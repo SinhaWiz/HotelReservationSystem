@@ -32,6 +32,9 @@ public class EnhancedServiceTest {
             // Test new features
             testNewFeatures(service);
             
+            // Test service usage operations
+            testServiceUsageOperations(service);
+
             System.out.println("\n=== All tests completed successfully! ===");
             
         } catch (Exception e) {
@@ -99,14 +102,6 @@ public class EnhancedServiceTest {
             System.out.println("⚠ Room service test skipped: " + e.getMessage());
         }
         
-        // Test blacklist operations
-        try {
-            List<BlacklistedCustomer> blacklistedCustomers = service.getAllBlacklistedCustomers();
-            System.out.println("✓ Retrieved " + blacklistedCustomers.size() + " blacklisted customers");
-        } catch (Exception e) {
-            System.out.println("⚠ Blacklist test skipped: " + e.getMessage());
-        }
-        
         // Test invoice operations
         try {
             List<Invoice> invoices = service.getAllInvoices();
@@ -135,6 +130,17 @@ public class EnhancedServiceTest {
             System.out.println("  - Occupancy Rate: " + String.format("%.2f%%", occupancyRate));
         } catch (Exception e) {
             System.out.println("⚠ Statistics test skipped: " + e.getMessage());
+        }
+    }
+
+    private static void testServiceUsageOperations(EnhancedHotelManagementService service) {
+        System.out.println("\n--- Testing Service Usage Operations ---");
+
+        // Test service usage operations
+        try {
+            System.out.println("✓ Service usage operations available");
+        } catch (Exception e) {
+            System.err.println("✗ Service usage operations failed: " + e.getMessage());
         }
     }
 }

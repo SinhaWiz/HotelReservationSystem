@@ -445,7 +445,7 @@ public class InvoiceManagementPanel extends JPanel {
                 return;
             }
             
-            Invoice invoice = hotelService.generateInvoice(bookingId, taxRate, createdBy);
+            Invoice invoice = hotelService.generateInvoice((int) bookingId, taxRate, createdBy);
             
             showSuccess("Invoice generated successfully!\nInvoice Number: " + invoice.getInvoiceNumber() +
                        "\nTotal Amount: " + invoice.getFormattedTotalAmount());
@@ -519,7 +519,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         try {
             long invoiceId = (Long) invoicesTableModel.getValueAt(selectedRow, 0);
-            Invoice invoice = hotelService.getInvoice(invoiceId);
+            Invoice invoice = hotelService.getInvoice((int) invoiceId);
             
             lineItemsTableModel.setRowCount(0);
             
@@ -575,7 +575,7 @@ public class InvoiceManagementPanel extends JPanel {
                 paymentDate = new Date();
             }
             
-            hotelService.updateInvoicePaymentStatus(invoiceId, paymentStatus, paymentDate, paymentMethod);
+            hotelService.updateInvoicePaymentStatus((int) invoiceId, paymentStatus, paymentDate, paymentMethod);
             
             showSuccess("Payment status updated successfully!");
             loadInvoicesData();
@@ -689,11 +689,15 @@ public class InvoiceManagementPanel extends JPanel {
     
     private void updateFinancialSummary() {
         try {
-            double totalRevenue = hotelService.getTotalRevenue();
+            // Calculate revenue for the last 30 days
+            Date endDate = new Date();
+            Date startDate = new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
+
+            double totalRevenue = hotelService.getTotalRevenue(startDate, endDate);
             double pendingPayments = hotelService.getPendingPaymentAmount();
             
             financialSummaryLabel.setText(String.format(
-                "Financial Summary - Total Revenue: $%.2f | Pending Payments: $%.2f", 
+                "Financial Summary - Total Revenue (Last 30 days): $%.2f | Pending Payments: $%.2f",
                 totalRevenue, pendingPayments));
             
         } catch (SQLException e) {
@@ -708,10 +712,14 @@ public class InvoiceManagementPanel extends JPanel {
         report.append("==============\n");
         report.append("Generated on: ").append(new Date()).append("\n\n");
         
-        double totalRevenue = hotelService.getTotalRevenue();
+        // Calculate revenue for the last 30 days
+        Date endDate = new Date();
+        Date startDate = new Date(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000);
+
+        double totalRevenue = hotelService.getTotalRevenue(startDate, endDate);
         double pendingPayments = hotelService.getPendingPaymentAmount();
         
-        report.append("FINANCIAL SUMMARY:\n");
+        report.append("FINANCIAL SUMMARY (Last 30 days):\n");
         report.append("- Total Revenue (Paid): $").append(String.format("%.2f", totalRevenue)).append("\n");
         report.append("- Pending Payments: $").append(String.format("%.2f", pendingPayments)).append("\n");
         report.append("- Total Outstanding: $").append(String.format("%.2f", totalRevenue + pendingPayments)).append("\n\n");
