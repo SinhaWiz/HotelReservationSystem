@@ -299,7 +299,10 @@ public class EnhancedHotelManagementService {
     }
 
     public List<VIPMember> getVIPMembersByLevel(VIPMember.MembershipLevel level) throws SQLException {
-        return vipMemberDAO.findByMembershipLevel(level);
+        if (level == null) {
+            return vipMemberDAO.findAllWithDetails();
+        }
+        return vipMemberDAO.findByMembershipLevelWithDetails(level);
     }
 
     public void processVIPRenewals() throws SQLException {
@@ -337,13 +340,13 @@ public class EnhancedHotelManagementService {
     }
 
     public List<Invoice> getInvoicesByDateRange(Date startDate, Date endDate) throws SQLException {
-        return invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
+        return invoiceDAO.findByDateRange(new java.sql.Date(startDate.getTime()), new java.sql.Date(endDate.getTime()));
     }
 
     // ==================== REPORTING AND ANALYTICS ====================
 
     public double getTotalRevenue(Date startDate, Date endDate) throws SQLException {
-        List<Invoice> invoices = invoiceDAO.findByDateRange((java.sql.Date) startDate, (java.sql.Date) endDate);
+        List<Invoice> invoices = invoiceDAO.findByDateRange(new java.sql.Date(startDate.getTime()), new java.sql.Date(endDate.getTime()));
         return invoices.stream()
                 .filter(invoice -> invoice.getPaymentStatus() == Invoice.PaymentStatus.PAID)
                 .mapToDouble(Invoice::getTotalAmount)
@@ -457,7 +460,8 @@ public class EnhancedHotelManagementService {
 
     public void updateInvoicePaymentStatus(int invoiceId, Invoice.PaymentStatus paymentStatus,
                                          Date paymentDate, String paymentMethod) throws SQLException {
-        invoiceDAO.updatePaymentStatus((long)invoiceId, paymentStatus, (java.sql.Date) paymentDate, paymentMethod);
+        invoiceDAO.updatePaymentStatus((long)invoiceId, paymentStatus,
+            paymentDate != null ? new java.sql.Date(paymentDate.getTime()) : null, paymentMethod);
     }
 
     public Invoice getInvoiceByNumber(String invoiceNumber) throws SQLException {
@@ -501,7 +505,7 @@ public class EnhancedHotelManagementService {
         VIPMember vipMember = new VIPMember();
         vipMember.setCustomerId(customerId);
         vipMember.setMembershipLevel(level);
-        vipMember.setJoinDate(new Date());
+        vipMember.setJoinDate(new java.sql.Date(System.currentTimeMillis()));
         vipMember.setDiscountPercentage(VIPMember.getDefaultDiscountForLevel(level));
         vipMember.setBenefits(VIPMember.getDefaultBenefitsForLevel(level));
         vipMember.setActive(true);

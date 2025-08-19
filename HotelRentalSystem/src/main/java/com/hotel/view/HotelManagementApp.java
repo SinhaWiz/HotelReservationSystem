@@ -322,7 +322,6 @@ public class HotelManagementApp extends JFrame {
                         "• Room Management with Service Assignments\\n" +
                         "• VIP Member Management with Auto-Promotion\\n" +
                         "• Room Service Management\\n" +
-                        "• Customer Blacklist Management\\n" +
                         "• Invoice Generation and Payment Tracking\\n" +
                         "• Automated Data Archiving (60 days)\\n" +
                         "• Late Checkout Extra Charges\\n" +
@@ -379,4 +378,3 @@ public class HotelManagementApp extends JFrame {
         });
     }
 }
-

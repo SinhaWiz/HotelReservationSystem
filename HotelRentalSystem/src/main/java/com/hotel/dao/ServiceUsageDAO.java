@@ -149,8 +149,12 @@ public class ServiceUsageDAO {
                         summary.setQuantity(rs.getInt("total_quantity"));
                         summary.setUnitPrice(rs.getDouble("avg_unit_price"));
                         summary.setTotalCost(rs.getDouble("total_cost"));
-                        summary.setUsageDate(rs.getDate("last_used_date"));
-                        summary.setNotes("Service: " + rs.getString("service_name") + 
+
+                        // Convert java.sql.Date to java.util.Date
+                        java.sql.Date usageSqlDate = rs.getDate("last_used_date");
+                        summary.setUsageDate(usageSqlDate != null ? new java.util.Date(usageSqlDate.getTime()) : null);
+
+                        summary.setNotes("Service: " + rs.getString("service_name") +
                                        ", Category: " + rs.getString("service_category") +
                                        ", Bookings: " + rs.getInt("bookings_used"));
                         summaryList.add(summary);

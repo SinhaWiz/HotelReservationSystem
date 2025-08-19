@@ -328,8 +328,8 @@ public class VIPMemberDAO {
      * Process VIP renewals using stored procedure
      */
     public void processVIPRenewals() throws SQLException {
-        String sql = "{call process_vip_renewals}";
-        
+        String sql = "{call process_vip_renewals()}";
+
         Connection conn = null;
         CallableStatement cstmt = null;
         
@@ -366,7 +366,7 @@ public class VIPMemberDAO {
     /**
      * Update VIP member information (overloaded)
      */
-    public void update(VIPMember member) throws SQLException {
+    public boolean update(VIPMember member) throws SQLException {
         String sql = "UPDATE vip_members SET membership_level = ?, discount_percentage = ?, " +
                     "membership_end_date = ?, benefits = ?, is_active = ? WHERE vip_id = ?";
 
@@ -375,12 +375,16 @@ public class VIPMemberDAO {
 
             pstmt.setString(1, member.getMembershipLevel().name());
             pstmt.setDouble(2, member.getDiscountPercentage());
-            pstmt.setDate(3, new java.sql.Date(member.getMembershipEndDate().getTime()));
+            if (member.getMembershipEndDate() != null) {
+                pstmt.setDate(3, new java.sql.Date(member.getMembershipEndDate().getTime()));
+            } else {
+                pstmt.setNull(3, Types.DATE);
+            }
             pstmt.setString(4, member.getBenefits());
             pstmt.setString(5, member.isActive() ? "Y" : "N");
             pstmt.setInt(6, member.getVipId());
 
-            pstmt.executeUpdate();
+            return pstmt.executeUpdate() > 0;
         }
     }
 
@@ -450,14 +454,15 @@ public class VIPMemberDAO {
         vipMember.setMembershipLevelFromString(rs.getString("membership_level"));
         vipMember.setDiscountPercentage(rs.getDouble("discount_percentage"));
         
-        Date startDate = rs.getDate("membership_start_date");
-        if (startDate != null) {
-            vipMember.setMembershipStartDate(new java.util.Date(startDate.getTime()));
+        // Convert java.sql.Date to model's date type (java.sql.Date)
+        java.sql.Date startSqlDate = rs.getDate("membership_start_date");
+        if (startSqlDate != null) {
+            vipMember.setMembershipStartDate(startSqlDate);
         }
         
-        Date endDate = rs.getDate("membership_end_date");
-        if (endDate != null) {
-            vipMember.setMembershipEndDate(new java.util.Date(endDate.getTime()));
+        java.sql.Date endSqlDate = rs.getDate("membership_end_date");
+        if (endSqlDate != null) {
+            vipMember.setMembershipEndDate(endSqlDate);
         }
         
         vipMember.setBenefits(rs.getString("benefits"));
@@ -488,14 +493,15 @@ public class VIPMemberDAO {
         vipMember.setMembershipLevelFromString(rs.getString("membership_level"));
         vipMember.setDiscountPercentage(rs.getDouble("discount_percentage"));
         
-        Date startDate = rs.getDate("membership_start_date");
-        if (startDate != null) {
-            vipMember.setMembershipStartDate(new java.util.Date(startDate.getTime()));
+        // Convert java.sql.Date to model's date type (java.sql.Date)
+        java.sql.Date startSqlDate = rs.getDate("membership_start_date");
+        if (startSqlDate != null) {
+            vipMember.setMembershipStartDate(startSqlDate);
         }
         
-        Date endDate = rs.getDate("membership_end_date");
-        if (endDate != null) {
-            vipMember.setMembershipEndDate(new java.util.Date(endDate.getTime()));
+        java.sql.Date endSqlDate = rs.getDate("membership_end_date");
+        if (endSqlDate != null) {
+            vipMember.setMembershipEndDate(endSqlDate);
         }
         
         vipMember.setBenefits(rs.getString("benefits"));
