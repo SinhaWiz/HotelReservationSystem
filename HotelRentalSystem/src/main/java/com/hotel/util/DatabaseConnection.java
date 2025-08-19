@@ -39,9 +39,9 @@ public class DatabaseConnection {
         } catch (IOException e) {
             // Use default values if config file not found
             System.out.println("Database config file not found, using default values");
-            DB_URL = "jdbc:oracle:thin:@localhost:1521:XE";
-            DB_USERNAME = "hotel_admin";
-            DB_PASSWORD = "password";
+            DB_URL = "jdbc:oracle:thin:@localhost:1521:orcl3";
+            DB_USERNAME = "CATWOMAN";
+            DB_PASSWORD = "sinhawiz";
         }
     }
     

@@ -9,7 +9,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.sql.Date;
 import java.util.List;
 
 /**
@@ -600,7 +600,8 @@ class VIPMemberUpdateDialog extends JDialog {
             // Parse end date if provided
             if (!endDateField.getText().trim().isEmpty()) {
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-                Date endDate = dateFormat.parse(endDateField.getText().trim());
+                java.util.Date utilDate = dateFormat.parse(endDateField.getText().trim());
+                Date endDate = new Date(utilDate.getTime());
                 vipMember.setMembershipEndDate(endDate);
             }
             

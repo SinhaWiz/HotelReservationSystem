@@ -133,11 +133,11 @@ public class BookingDAO {
 
     public List<Booking> getCurrentBookings() throws SQLException {
         String sql = "SELECT b.*, c.first_name, c.last_name, c.email, " +
-                    "r.room_number, r.room_type_id, rt.type_name " +
+                    "r.room_number, r.type_id, rt.type_name " +
                     "FROM bookings b " +
                     "JOIN customers c ON b.customer_id = c.customer_id " +
                     "JOIN rooms r ON b.room_id = r.room_id " +
-                    "JOIN room_types rt ON r.room_type_id = rt.room_type_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
                     "WHERE b.booking_status IN ('CONFIRMED', 'CHECKED_IN') " +
                     "AND b.check_out_date >= SYSDATE";
 
@@ -255,11 +255,11 @@ public class BookingDAO {
 
     public Booking getBookingById(int bookingId) throws SQLException {
         String sql = "SELECT b.*, c.first_name, c.last_name, c.email, " +
-                    "r.room_number, r.room_type_id, rt.type_name " +
+                    "r.room_number, r.type_id, rt.type_name " +
                     "FROM bookings b " +
                     "JOIN customers c ON b.customer_id = c.customer_id " +
                     "JOIN rooms r ON b.room_id = r.room_id " +
-                    "JOIN room_types rt ON r.room_type_id = rt.room_type_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
                     "WHERE b.booking_id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -278,11 +278,11 @@ public class BookingDAO {
 
     public List<Booking> getBookingsByDateRange(Date startDate, Date endDate) throws SQLException {
         String sql = "SELECT b.*, c.first_name, c.last_name, c.email, " +
-                    "r.room_number, r.room_type_id, rt.type_name " +
+                    "r.room_number, r.type_id, rt.type_name " +
                     "FROM bookings b " +
                     "JOIN customers c ON b.customer_id = c.customer_id " +
                     "JOIN rooms r ON b.room_id = r.room_id " +
-                    "JOIN room_types rt ON r.room_type_id = rt.room_type_id " +
+                    "JOIN room_types rt ON r.type_id = rt.type_id " +
                     "WHERE b.check_in_date <= ? AND b.check_out_date >= ?";
 
         List<Booking> bookings = new ArrayList<>();
@@ -354,13 +354,22 @@ public class BookingDAO {
         booking.setBookingId(rs.getLong("booking_id"));
         booking.setCustomerId(rs.getInt("customer_id"));
         booking.setRoomId(rs.getInt("room_id"));
-        booking.setCheckInDate(rs.getDate("check_in_date"));
-        booking.setCheckOutDate(rs.getDate("check_out_date"));
+
+        // Convert java.sql.Date to java.util.Date
+        java.sql.Date checkInSqlDate = rs.getDate("check_in_date");
+        booking.setCheckInDate(checkInSqlDate != null ? new java.util.Date(checkInSqlDate.getTime()) : null);
+
+        java.sql.Date checkOutSqlDate = rs.getDate("check_out_date");
+        booking.setCheckOutDate(checkOutSqlDate != null ? new java.util.Date(checkOutSqlDate.getTime()) : null);
+
         booking.setBookingStatus(rs.getString("booking_status"));
         booking.setTotalAmount(rs.getDouble("total_amount"));
         booking.setDiscountApplied(rs.getDouble("discount_applied"));
         booking.setExtraCharges(rs.getDouble("extra_charges"));
-        booking.setCreatedDate(rs.getDate("created_date"));
+
+        java.sql.Date createdSqlDate = rs.getDate("created_date");
+        booking.setCreatedDate(createdSqlDate != null ? new java.util.Date(createdSqlDate.getTime()) : null);
+
         booking.setCreatedBy(rs.getString("created_by"));
         return booking;
     }

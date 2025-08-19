@@ -1,6 +1,6 @@
 package com.hotel.model;
 
-import java.util.Date;
+import java.sql.Date;
 
 /**
  * VIPMember model class representing VIP customers with special privileges
@@ -25,7 +25,7 @@ public class VIPMember {
     public VIPMember() {
         this.membershipLevel = MembershipLevel.GOLD;
         this.discountPercentage = 10.0;
-        this.membershipStartDate = new Date();
+        this.membershipStartDate = new Date(System.currentTimeMillis());
         this.isActive = true;
     }
     
@@ -143,22 +143,23 @@ public class VIPMember {
         this.membershipStartDate = membershipStartDate;
     }
 
-    // Add missing setter methods
-    public void setJoinDate(Date joinDate) {
-        this.membershipStartDate = joinDate;
-    }
-
-    public void setUpgradeDate(Date upgradeDate) {
-        // For upgrade tracking - could be stored separately if needed
-        this.membershipStartDate = upgradeDate;
-    }
-
     public Date getMembershipEndDate() {
         return membershipEndDate;
     }
 
     public void setMembershipEndDate(Date membershipEndDate) {
         this.membershipEndDate = membershipEndDate;
+    }
+
+    // Add missing setter methods
+    public void setJoinDate(Date joinDate) {
+        this.membershipStartDate = joinDate;
+    }
+
+    public void setUpgradeDate(Date upgradeDate) {
+        // This could be used for tracking when membership level was upgraded
+        // For now, we'll update the start date
+        this.membershipStartDate = upgradeDate;
     }
 
     public String getBenefits() {
