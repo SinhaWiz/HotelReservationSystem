@@ -68,13 +68,9 @@ CREATE OR REPLACE TRIGGER trg_update_vip_eligibility
 BEGIN
     -- Update VIP eligibility based on spending
     IF :NEW.total_spent >= 5000 THEN
-        UPDATE customers
-        SET vip_promotion_eligible = 'Y'
-        WHERE customer_id = :NEW.customer_id;
+        UPDATE customers SET vip_promotion_eligible = 'Y' WHERE customer_id = :NEW.customer_id;
     ELSE
-        UPDATE customers 
-        SET vip_promotion_eligible = 'N'
-        WHERE customer_id = :NEW.customer_id;
+        UPDATE customers SET vip_promotion_eligible = 'N' WHERE customer_id = :NEW.customer_id;
     END IF;
 END;
 /
@@ -86,15 +82,11 @@ CREATE OR REPLACE TRIGGER trg_auto_update_room_status
 BEGIN
     -- Update room status based on booking status changes
     IF :NEW.booking_status = 'CHECKED_IN' AND :OLD.booking_status = 'CONFIRMED' THEN
-        UPDATE rooms 
-        SET room_status = 'OCCUPIED'
-        WHERE room_id = :NEW.room_id;
-        
+        UPDATE rooms SET status = 'OCCUPIED' WHERE room_id = :NEW.room_id;
+
     ELSIF :NEW.booking_status = 'CHECKED_OUT' AND :OLD.booking_status = 'CHECKED_IN' THEN
-        UPDATE rooms 
-        SET room_status = 'MAINTENANCE' -- Needs cleaning before next guest
-        WHERE room_id = :NEW.room_id;
-        
+        UPDATE rooms SET status = 'MAINTENANCE' WHERE room_id = :NEW.room_id; -- Needs cleaning
+
         -- Schedule automatic cleaning
         INSERT INTO room_maintenance_log (
             maintenance_id, room_id, maintenance_type, description,
@@ -107,20 +99,13 @@ BEGIN
         
     ELSIF :NEW.booking_status = 'CANCELLED' AND :OLD.booking_status = 'CONFIRMED' THEN
         -- Check if room has other bookings, if not make it available
-        DECLARE
-            v_other_bookings NUMBER;
-        BEGIN
-            SELECT COUNT(*)
-            INTO v_other_bookings
-            FROM bookings
+        DECLARE v_other_bookings NUMBER; BEGIN
+            SELECT COUNT(*) INTO v_other_bookings FROM bookings
             WHERE room_id = :NEW.room_id
-            AND booking_status IN ('CONFIRMED', 'CHECKED_IN')
-            AND booking_id != :NEW.booking_id;
-            
+              AND booking_status IN ('CONFIRMED', 'CHECKED_IN')
+              AND booking_id != :NEW.booking_id;
             IF v_other_bookings = 0 THEN
-                UPDATE rooms 
-                SET room_status = 'AVAILABLE'
-                WHERE room_id = :NEW.room_id;
+                UPDATE rooms SET status = 'AVAILABLE' WHERE room_id = :NEW.room_id;
             END IF;
         END;
     END IF;
@@ -138,21 +123,21 @@ BEGIN
     -- Determine which booking to update
     IF INSERTING OR UPDATING THEN
         v_booking_id := :NEW.booking_id;
-    ELSE -- DELETING
+    ELSE
         v_booking_id := :OLD.booking_id;
     END IF;
     
     -- Calculate new services total
     SELECT NVL(SUM(total_cost), 0)
-    INTO v_new_total
-    FROM customer_service_usage
-    WHERE booking_id = v_booking_id;
-    
+      INTO v_new_total
+      FROM customer_service_usage
+     WHERE booking_id = v_booking_id;
+
     -- Update booking services total
     UPDATE bookings 
-    SET services_total = v_new_total,
-        total_amount = (total_amount - services_total) + v_new_total
-    WHERE booking_id = v_booking_id;
+       SET services_total = v_new_total,
+           total_amount = (total_amount - services_total) + v_new_total
+     WHERE booking_id = v_booking_id;
 END;
 /
 
@@ -169,7 +154,6 @@ BEGIN
             promotion_seq.NEXTVAL, :NEW.customer_id, :NEW.membership_level, SYSDATE,
             'VIP membership created', USER
         );
-        
     ELSIF UPDATING AND :OLD.membership_level != :NEW.membership_level THEN
         INSERT INTO vip_promotion_history (
             promotion_id, customer_id, previous_level, new_level, promotion_date,
@@ -191,23 +175,21 @@ DECLARE
     v_service_available NUMBER;
 BEGIN
     -- Get room type for the booking
-    SELECT rt.room_type_id
-    INTO v_room_type_id
-    FROM bookings b
-    JOIN rooms r ON b.room_id = r.room_id
-    JOIN room_types rt ON r.room_type_id = rt.room_type_id
-    WHERE b.booking_id = :NEW.booking_id;
-    
+    SELECT rt.type_id
+      INTO v_room_type_id
+      FROM bookings b
+      JOIN rooms r ON b.room_id = r.room_id
+      JOIN room_types rt ON r.type_id = rt.type_id
+     WHERE b.booking_id = :NEW.booking_id;
+
     -- Check if service is available for this room type
-    SELECT COUNT(*)
-    INTO v_service_available
-    FROM room_service_assignments rsa
-    WHERE rsa.room_type_id = v_room_type_id
-    AND rsa.service_id = :NEW.service_id;
-    
+    SELECT COUNT(*) INTO v_service_available
+      FROM room_service_assignments rsa
+     WHERE rsa.room_type_id = v_room_type_id
+       AND rsa.service_id = :NEW.service_id;
+
     IF v_service_available = 0 THEN
-        RAISE_APPLICATION_ERROR(-20011, 
-            'Service not available for this room type');
+        RAISE_APPLICATION_ERROR(-20011, 'Service not available for this room type');
     END IF;
 END;
 /
@@ -224,18 +206,13 @@ DECLARE
 BEGIN
     -- Check if we've promoted customers this week
     SELECT NVL(MAX(promotion_date), SYSDATE - 8)
-    INTO v_last_promotion
-    FROM vip_promotion_history
-    WHERE promotion_reason = 'Top 5 customer automatic promotion';
-    
+      INTO v_last_promotion
+      FROM vip_promotion_history
+     WHERE promotion_reason = 'Top 5 customer automatic promotion';
+
     -- Only promote if it's been more than 7 days
     IF SYSDATE - v_last_promotion > 7 THEN
-        promote_top_customers_to_vip(
-            'SYSTEM_AUTO',
-            v_promotions_count,
-            v_success,
-            v_message
-        );
+        promote_top_customers_to_vip('SYSTEM_AUTO', v_promotions_count, v_success, v_message);
     END IF;
 END;
 /
@@ -250,8 +227,6 @@ BEGIN
     ELSIF :NEW.payment_date IS NULL AND :OLD.payment_date IS NOT NULL THEN
         :NEW.payment_status := 'PENDING';
     END IF;
-    
-    -- Check for overdue invoices
     IF :NEW.payment_status = 'PENDING' AND SYSDATE > :NEW.due_date THEN
         :NEW.payment_status := 'OVERDUE';
     END IF;
@@ -266,28 +241,15 @@ DECLARE
     v_active_bookings NUMBER;
     v_unpaid_invoices NUMBER;
 BEGIN
-    -- Check for active bookings
-    SELECT COUNT(*)
-    INTO v_active_bookings
-    FROM bookings
-    WHERE customer_id = :OLD.customer_id
-    AND booking_status IN ('CONFIRMED', 'CHECKED_IN');
-    
+    SELECT COUNT(*) INTO v_active_bookings FROM bookings
+     WHERE customer_id = :OLD.customer_id AND booking_status IN ('CONFIRMED', 'CHECKED_IN');
     IF v_active_bookings > 0 THEN
-        RAISE_APPLICATION_ERROR(-20012, 
-            'Cannot delete customer with active bookings');
+        RAISE_APPLICATION_ERROR(-20012, 'Cannot delete customer with active bookings');
     END IF;
-    
-    -- Check for unpaid invoices
-    SELECT COUNT(*)
-    INTO v_unpaid_invoices
-    FROM invoices
-    WHERE customer_id = :OLD.customer_id
-    AND payment_status IN ('PENDING', 'OVERDUE');
-    
+    SELECT COUNT(*) INTO v_unpaid_invoices FROM invoices
+     WHERE customer_id = :OLD.customer_id AND payment_status IN ('PENDING', 'OVERDUE');
     IF v_unpaid_invoices > 0 THEN
-        RAISE_APPLICATION_ERROR(-20013, 
-            'Cannot delete customer with unpaid invoices');
+        RAISE_APPLICATION_ERROR(-20013, 'Cannot delete customer with unpaid invoices');
     END IF;
 END;
 /
@@ -299,23 +261,17 @@ CREATE OR REPLACE TRIGGER trg_complete_room_maintenance
 BEGIN
     IF :NEW.maintenance_status = 'COMPLETED' AND :OLD.maintenance_status != 'COMPLETED' THEN
         -- Check if this was the last pending maintenance for the room
-        DECLARE
-            v_pending_maintenance NUMBER;
-        BEGIN
-            SELECT COUNT(*)
-            INTO v_pending_maintenance
-            FROM room_maintenance_log
-            WHERE room_id = :NEW.room_id
-            AND maintenance_status IN ('SCHEDULED', 'IN_PROGRESS')
-            AND maintenance_id != :NEW.maintenance_id;
-            
-            -- If no more pending maintenance, make room available
+        DECLARE v_pending_maintenance NUMBER; BEGIN
+            SELECT COUNT(*) INTO v_pending_maintenance
+              FROM room_maintenance_log
+             WHERE room_id = :NEW.room_id
+               AND maintenance_status IN ('SCHEDULED', 'IN_PROGRESS')
+               AND maintenance_id != :NEW.maintenance_id;
             IF v_pending_maintenance = 0 THEN
                 UPDATE rooms 
-                SET room_status = 'AVAILABLE',
-                    last_maintenance = SYSDATE
-                WHERE room_id = :NEW.room_id
-                AND room_status = 'MAINTENANCE';
+                   SET status = 'AVAILABLE', last_maintenance = SYSDATE
+                 WHERE room_id = :NEW.room_id
+                   AND status = 'MAINTENANCE';
             END IF;
         END;
     END IF;

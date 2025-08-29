@@ -114,7 +114,7 @@ BEGIN
     END
     INTO v_available
     FROM room_service_assignments rsa
-    JOIN rooms r ON rsa.room_type_id = r.room_type_id
+    JOIN rooms r ON rsa.room_type_id = r.TYPE_ID
     WHERE r.room_id = p_room_id
     AND rsa.service_id = p_service_id;
     
@@ -160,8 +160,8 @@ BEGIN
     SELECT COUNT(*)
     INTO v_count
     FROM rooms r
-    WHERE r.room_status = 'AVAILABLE'
-    AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id)
+    WHERE r.STATUS = 'AVAILABLE'
+    AND (p_room_type_id IS NULL OR r.type_id = p_room_type_id)
     AND r.room_id NOT IN (
         SELECT DISTINCT b.room_id
         FROM bookings b
@@ -263,7 +263,7 @@ BEGIN
     SELECT COUNT(*) * (p_end_date - p_start_date)
     INTO v_total_room_days
     FROM rooms r
-    WHERE (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id);
+    WHERE (p_room_type_id IS NULL OR r.type_id = p_room_type_id);
     
     -- Calculate occupied days
     SELECT NVL(SUM(LEAST(b.check_out_date, p_end_date) - GREATEST(b.check_in_date, p_start_date)), 0)
@@ -273,7 +273,7 @@ BEGIN
     WHERE b.booking_status IN ('CHECKED_IN', 'CHECKED_OUT')
     AND b.check_in_date < p_end_date
     AND b.check_out_date > p_start_date
-    AND (p_room_type_id IS NULL OR r.room_type_id = p_room_type_id);
+    AND (p_room_type_id IS NULL OR r.type_id = p_room_type_id);
     
     IF v_total_room_days > 0 THEN
         v_occupancy_rate := (v_occupied_days / v_total_room_days) * 100;
@@ -348,8 +348,8 @@ BEGIN
     FROM (
         SELECT r.room_id
         FROM rooms r
-        WHERE r.room_type_id = p_room_type_id
-        AND r.room_status = 'AVAILABLE'
+        WHERE r.type_id = p_room_type_id
+        AND r.status = 'AVAILABLE'
         AND r.room_id NOT IN (
             SELECT DISTINCT b.room_id
             FROM bookings b
