@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/00_master_install.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/01_create_invoice_procedure.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/01_create_tables.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/01_schema.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/02_insert_sample_data.sql" dialect="Oracle" />
-    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/03_enhanced_tables.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/02_procedures.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/03_procedures_and_triggers.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/03_triggers_and_functions.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/04_sample_data.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/create_bookings_fix.sql" dialect="Oracle" />
+    <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/customer_functions.sql" dialect="Oracle" />
     <file url="file://$PROJECT_DIR$/HotelRentalSystem/src/main/resources/database_setup.sql" dialect="Oracle" />
     <file url="PROJECT" dialect="Oracle" />
   </component>

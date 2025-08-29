@@ -324,28 +324,34 @@ public class InvoiceManagementPanel extends JPanel {
         try {
             List<Invoice> invoices = hotelService.getAllInvoices();
             invoicesTableModel.setRowCount(0);
-            
+
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-            
+
             for (Invoice invoice : invoices) {
+                Date invDate = invoice.getInvoiceDate();
+                Date dueDate = invoice.getDueDate();
+                Date payDate = invoice.getPaymentDate();
+                String invDateStr = invDate != null ? dateFormat.format(invDate) : "";
+                String dueDateStr = dueDate != null ? dateFormat.format(dueDate) : "";
+                String payDateStr = payDate != null ? dateFormat.format(payDate) : "";
                 Object[] row = {
                     invoice.getInvoiceId(),
                     invoice.getInvoiceNumber(),
                     invoice.getCustomerName(),
                     invoice.getBookingId(),
-                    dateFormat.format(invoice.getInvoiceDate()),
-                    dateFormat.format(invoice.getDueDate()),
+                    invDateStr,
+                    dueDateStr,
                     invoice.getFormattedSubtotal(),
                     invoice.getFormattedTaxAmount(),
                     invoice.getFormattedDiscountAmount(),
                     invoice.getFormattedTotalAmount(),
                     invoice.getPaymentStatus(),
-                    invoice.getPaymentDate() != null ? dateFormat.format(invoice.getPaymentDate()) : "",
+                    payDateStr,
                     invoice.getPaymentMethod() != null ? invoice.getPaymentMethod() : ""
                 };
                 invoicesTableModel.addRow(row);
             }
-            
+
         } catch (SQLException e) {
             showError("Error loading invoices: " + e.getMessage());
         }
@@ -865,4 +871,3 @@ public class InvoiceManagementPanel extends JPanel {
         JOptionPane.showMessageDialog(this, message, "Information", JOptionPane.INFORMATION_MESSAGE);
     }
 }
-

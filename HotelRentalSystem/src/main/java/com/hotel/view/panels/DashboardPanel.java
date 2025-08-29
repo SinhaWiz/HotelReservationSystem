@@ -282,32 +282,33 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
     public void refreshData() {
         SwingUtilities.invokeLater(() -> {
             try {
-                // Get system statistics
-                Object[] stats = hotelService.getSystemStatistics();
-                
-                totalCustomersLabel.setText(String.valueOf(stats[0]));
-                totalVIPMembersLabel.setText(String.valueOf(stats[1]));
-                totalRoomsLabel.setText(String.valueOf(stats[2]));
-                availableRoomsLabel.setText(String.valueOf(stats[3]));
-                currentReservationsLabel.setText(String.valueOf(stats[4]));
-                
-                // Calculate occupied rooms and occupancy rate
-                int totalRooms = (Integer) stats[2];
-                int availableRooms = (Integer) stats[3];
-                int occupiedRooms = totalRooms - availableRooms;
+                // Get system statistics properly
+                int totalCustomers = hotelService.getTotalCustomersCount();
+                int vipMembers = hotelService.getTotalVIPMembersCount();
+                int totalRooms = hotelService.getTotalRoomsCount();
+                int availableRooms = hotelService.getAvailableRoomsCount();
+                int occupiedRooms = hotelService.getOccupiedRoomsCount();
+                int currentReservations = hotelService.getCurrentReservationsCount();
+                double occupancyRate = hotelService.getOccupancyRate();
+
+                // Update UI
+                totalCustomersLabel.setText(String.valueOf(totalCustomers));
+                totalVIPMembersLabel.setText(String.valueOf(vipMembers));
+                totalRoomsLabel.setText(String.valueOf(totalRooms));
+                availableRoomsLabel.setText(String.valueOf(availableRooms));
                 occupiedRoomsLabel.setText(String.valueOf(occupiedRooms));
-                
-                double occupancyRate = totalRooms > 0 ? (double) occupiedRooms / totalRooms * 100 : 0;
+                currentReservationsLabel.setText(String.valueOf(currentReservations));
                 occupancyRateLabel.setText(String.format("%.1f%%", occupancyRate));
                 
-                // Update recent activity with current reservations
+                // Update recent activity with today's bookings
                 updateRecentActivity();
                 
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, 
+                JOptionPane.showMessageDialog(this,
                     "Error refreshing dashboard: " + e.getMessage(),
-                    "Refresh Error", 
+                    "Dashboard Error",
                     JOptionPane.ERROR_MESSAGE);
+                e.printStackTrace();
             }
         });
     }

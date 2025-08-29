@@ -1,23 +1,19 @@
 @echo off
-echo Setting up Oracle database for Hotel Rental System...
-echo Please make sure Oracle is installed and SQL*Plus is available
+echo Hotel Management DB setup (using 00_master_install.sql)
 echo.
-
-REM Connect to Oracle as SYSTEM and run the complete setup script
-sqlplus system/oracle@//localhost:1521/XE @src/main/resources/oracle_setup.sql
-
-if %ERRORLEVEL% EQU 0 (
-    echo Database setup completed successfully!
-    echo.
-    echo Sample users created:
-    echo - Admin: admin/admin123
-    echo - Owner: owner1/owner123
-    echo - Customer: customer1/customer123
-) else (
-    echo Failed to set up database. Please check your Oracle installation and credentials.
-    echo Make sure Oracle is running and the SYSTEM password is correct.
-    echo.
-    echo Alternative setup method:
-    echo 1. Connect to Oracle as SYSTEM: sqlplus system/oracle@//localhost:1521/XE
-    echo 2. Run the setup script manually: @src/main/resources/oracle_setup.sql
-) 
+echo Enter application schema username (e.g. CATWOMAN):
+set /p APP_USER=
+echo Enter password for %APP_USER%:
+set /p APP_PASS=
+echo Enter connect descriptor (default //localhost:1521/orcl3):
+set /p APP_TNS=
+if "%APP_TNS%"=="" set APP_TNS=//localhost:1521/orcl3
+echo.
+echo Running master install as %APP_USER%@%APP_TNS% ...
+sqlplus -L %APP_USER%/%APP_PASS%@%APP_TNS% @src/main/resources/00_master_install.sql
+if %ERRORLEVEL% NEQ 0 (
+  echo Master install failed. Check credentials / Oracle status.
+  exit /b 1
+)
+echo Done.
+exit /b 0
