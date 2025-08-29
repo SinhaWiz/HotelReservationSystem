@@ -316,7 +316,7 @@ public class BookingDAO {
     }
 
     public boolean checkOutCustomer(int bookingId) throws SQLException {
-        String sql = "UPDATE bookings SET booking_status = 'COMPLETED', " +
+        String sql = "UPDATE bookings SET booking_status = 'CHECKED_OUT', " +
                     "actual_check_out = SYSDATE WHERE booking_id = ? " +
                     "AND booking_status = 'CHECKED_IN'";
 
@@ -371,6 +371,39 @@ public class BookingDAO {
         booking.setCreatedDate(createdSqlDate != null ? new java.util.Date(createdSqlDate.getTime()) : null);
 
         booking.setCreatedBy(rs.getString("created_by"));
+
+        // Check if customer data is available (for JOINed queries)
+        try {
+            String firstName = rs.getString("first_name");
+            String lastName = rs.getString("last_name");
+            String email = rs.getString("email");
+
+            if (firstName != null && lastName != null) {
+                booking.getCustomer().setFirstName(firstName);
+                booking.getCustomer().setLastName(lastName);
+                booking.getCustomer().setEmail(email);
+                booking.getCustomer().setCustomerId(booking.getCustomerId());
+            }
+        } catch (SQLException e) {
+            // Column not found, which is okay for non-JOIN queries
+        }
+
+        // Check if room data is available (for JOINed queries)
+        try {
+            String roomNumber = rs.getString("room_number");
+            int typeId = rs.getInt("type_id");
+            String typeName = rs.getString("type_name");
+
+            if (roomNumber != null) {
+                booking.getRoom().setRoomNumber(roomNumber);
+                booking.getRoom().setRoomId(booking.getRoomId());
+                booking.getRoom().setTypeId(typeId);
+                booking.getRoom().getRoomType().setTypeName(typeName);
+            }
+        } catch (SQLException e) {
+            // Column not found, which is okay for non-JOIN queries
+        }
+
         return booking;
     }
 }

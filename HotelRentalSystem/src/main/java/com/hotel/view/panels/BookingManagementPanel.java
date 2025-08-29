@@ -309,7 +309,19 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         }
         
         int modelRow = bookingsTable.convertRowIndexToModel(selectedRow);
-        int bookingId = (Integer) tableModel.getValueAt(modelRow, 0);
+
+        // Fix: Replace direct Integer cast with type-safe conversion
+        Object bookingIdObj = tableModel.getValueAt(modelRow, 0);
+        int bookingId;
+
+        if (bookingIdObj instanceof Long) {
+            bookingId = ((Long) bookingIdObj).intValue();
+        } else if (bookingIdObj instanceof Integer) {
+            bookingId = (Integer) bookingIdObj;
+        } else {
+            bookingId = Integer.parseInt(bookingIdObj.toString());
+        }
+
         String status = (String) tableModel.getValueAt(modelRow, 7);
         
         if (!"CONFIRMED".equals(status)) {
@@ -341,7 +353,18 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         }
         
         int modelRow = bookingsTable.convertRowIndexToModel(selectedRow);
-        int bookingId = (Integer) tableModel.getValueAt(modelRow, 0);
+        // Fix: Change Integer cast to Long, then convert to int for the API call
+        Object bookingIdObj = tableModel.getValueAt(modelRow, 0);
+        int bookingId;
+
+        if (bookingIdObj instanceof Long) {
+            bookingId = ((Long) bookingIdObj).intValue();
+        } else if (bookingIdObj instanceof Integer) {
+            bookingId = (Integer) bookingIdObj;
+        } else {
+            bookingId = Integer.parseInt(bookingIdObj.toString());
+        }
+
         String status = (String) tableModel.getValueAt(modelRow, 7);
         
         if (!"CHECKED_IN".equals(status)) {
@@ -600,4 +623,3 @@ class BookingDetailsDialog extends JDialog {
         panel.add(new JLabel(value != null ? value : "N/A"), gbc);
     }
 }
-
