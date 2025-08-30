@@ -396,7 +396,18 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         }
         
         int modelRow = bookingsTable.convertRowIndexToModel(selectedRow);
-        int bookingId = (Integer) tableModel.getValueAt(modelRow, 0);
+        // Fix: Handle Long to Integer conversion safely
+        Object bookingIdObj = tableModel.getValueAt(modelRow, 0);
+        int bookingId;
+
+        if (bookingIdObj instanceof Long) {
+            bookingId = ((Long) bookingIdObj).intValue();
+        } else if (bookingIdObj instanceof Integer) {
+            bookingId = (Integer) bookingIdObj;
+        } else {
+            bookingId = Integer.parseInt(bookingIdObj.toString());
+        }
+
         String customerName = (String) tableModel.getValueAt(modelRow, 1);
         String status = (String) tableModel.getValueAt(modelRow, 7);
         
