@@ -81,6 +81,42 @@ public class EnhancedHotelManagementService {
             throw new SQLException("Room is not available for the selected dates");
         }
 
+        // Calculate total amount based on room price and nights
+        Room room = roomDAO.findById(booking.getRoomId());
+        if (room == null) {
+            throw new SQLException("Room not found with ID: " + booking.getRoomId());
+        }
+
+        // Calculate number of nights
+        long diffInMillies = booking.getCheckOutDate().getTime() - booking.getCheckInDate().getTime();
+        int numberOfNights = (int) (diffInMillies / (1000 * 60 * 60 * 24));
+        if (numberOfNights <= 0) {
+            numberOfNights = 1; // Minimum 1 night
+        }
+
+        // Calculate total amount
+        double baseAmount = room.getBasePrice() * numberOfNights;
+
+        // Check for VIP discount
+        double discount = 0.0;
+        try {
+            VIPMember vipMember = vipMemberDAO.findByCustomerId(booking.getCustomerId());
+            if (vipMember != null && vipMember.isActive()) {
+                discount = baseAmount * (vipMember.getDiscountPercentage() / 100.0);
+            }
+        } catch (SQLException e) {
+            // No VIP membership, continue without discount
+        }
+
+        booking.setTotalAmount(baseAmount - discount);
+        booking.setDiscountApplied(discount);
+        booking.setCreatedBy("SYSTEM");
+        booking.setBookingDate(new Date());
+
+        // Load customer information
+        Customer customer = customerDAO.findById(booking.getCustomerId());
+        booking.setCustomer(customer);
+
         return bookingDAO.create(booking);
     }
     
