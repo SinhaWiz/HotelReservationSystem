@@ -1,5 +1,9 @@
--- CONSOLIDATED SCHEMA: CORE TABLES (Idempotent via manual cleanup first)
--- Remove previous objects (ignore errors when running manually)
+-- ======================================================
+-- 01_create_tables.sql
+-- Schema definition for Hotel Reservation System
+-- ======================================================
+
+-- Remove existing objects (for clean installation)
 BEGIN
   FOR t IN (SELECT table_name FROM user_tables WHERE table_name IN (
     'INVOICE_LINE_ITEMS','INVOICES','CUSTOMER_SERVICE_USAGE','ROOM_SERVICE_ASSIGNMENTS',
@@ -13,6 +17,10 @@ BEGIN
   END LOOP;
 EXCEPTION WHEN OTHERS THEN NULL; END;
 /
+
+-- ======================================================
+-- CORE TABLES
+-- ======================================================
 
 -- ROOM TYPES
 CREATE TABLE room_types (
@@ -79,10 +87,8 @@ CREATE TABLE bookings (
   check_out_date    DATE NOT NULL,
   actual_check_in   DATE,
   actual_check_out  DATE,
-  late_checkout_hours NUMBER(5,2) DEFAULT 0,
-  services_total    NUMBER(12,2) DEFAULT 0,
   booking_date      DATE DEFAULT SYSDATE,
-  created_date      DATE DEFAULT SYSDATE,
+  late_checkout_hours NUMBER(5,2) DEFAULT 0,
   total_amount      NUMBER(12,2) NOT NULL,
   discount_applied  NUMBER(12,2) DEFAULT 0,
   extra_charges     NUMBER(12,2) DEFAULT 0,
@@ -90,6 +96,8 @@ CREATE TABLE bookings (
   booking_status    VARCHAR2(20) DEFAULT 'CONFIRMED' CHECK (booking_status IN ('CONFIRMED','CHECKED_IN','CHECKED_OUT','CANCELLED','NO_SHOW')),
   special_requests  VARCHAR2(500),
   created_by        VARCHAR2(50) DEFAULT USER,
+  created_date      DATE DEFAULT SYSDATE,
+  services_total    NUMBER(12,2) DEFAULT 0,
   CONSTRAINT chk_booking_dates CHECK (check_out_date > check_in_date)
 );
 
@@ -115,13 +123,13 @@ CREATE TABLE booking_archive (
 
 -- ROOM SERVICES
 CREATE TABLE room_services (
-  service_id       NUMBER(10) PRIMARY KEY,
-  service_name     VARCHAR2(100) NOT NULL UNIQUE,
-  service_description VARCHAR2(500), -- added
-  service_category VARCHAR2(50),
-  base_price       NUMBER(10,2) NOT NULL,
-  is_active        CHAR(1) DEFAULT 'Y' CHECK (is_active IN ('Y','N')),
-  created_date     DATE DEFAULT SYSDATE
+  service_id          NUMBER(10) PRIMARY KEY,
+  service_name        VARCHAR2(100) NOT NULL UNIQUE,
+  service_description VARCHAR2(500),
+  service_category    VARCHAR2(50),
+  base_price          NUMBER(10,2) NOT NULL,
+  is_active           CHAR(1) DEFAULT 'Y' CHECK (is_active IN ('Y','N')),
+  created_date        DATE DEFAULT SYSDATE
 );
 
 -- SERVICE ASSIGNMENTS
@@ -135,51 +143,53 @@ CREATE TABLE room_service_assignments (
 
 -- SERVICE USAGE
 CREATE TABLE customer_service_usage (
-  usage_id       NUMBER(12) PRIMARY KEY,
-  booking_id     NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
-  customer_id    NUMBER(10) NOT NULL REFERENCES customers(customer_id),
-  service_id     NUMBER(10) NOT NULL REFERENCES room_services(service_id),
-  usage_date     DATE DEFAULT SYSDATE,
-  quantity       NUMBER(5) DEFAULT 1,
-  unit_price     NUMBER(10,2) NOT NULL,
-  total_cost     NUMBER(12,2) NOT NULL,
+  usage_id         NUMBER(12) PRIMARY KEY,
+  booking_id       NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
+  customer_id      NUMBER(10) NOT NULL REFERENCES customers(customer_id),
+  service_id       NUMBER(10) NOT NULL REFERENCES room_services(service_id),
+  usage_date       DATE DEFAULT SYSDATE,
+  quantity         NUMBER(5) DEFAULT 1,
+  unit_price       NUMBER(10,2) NOT NULL,
+  total_cost       NUMBER(12,2) NOT NULL,
   is_complimentary CHAR(1) DEFAULT 'N' CHECK (is_complimentary IN ('Y','N'))
 );
 
 -- INVOICES
 CREATE TABLE invoices (
-  invoice_id      NUMBER(12) PRIMARY KEY,
-  booking_id      NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
-  customer_id     NUMBER(10) NOT NULL REFERENCES customers(customer_id),
-  invoice_number  VARCHAR2(30) NOT NULL UNIQUE,
-  invoice_date    DATE DEFAULT SYSDATE,
-  due_date        DATE,
-  subtotal        NUMBER(12,2) NOT NULL,
-  tax_amount      NUMBER(12,2) DEFAULT 0,
-  discount_amount NUMBER(12,2) DEFAULT 0,
-  total_amount    NUMBER(12,2) NOT NULL,
-  payment_status  VARCHAR2(20) DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING','PAID','OVERDUE','CANCELLED')),
-  payment_date    DATE,
-  payment_method  VARCHAR2(40),
-  notes           VARCHAR2(500),
-  created_by      VARCHAR2(50) DEFAULT USER,
-  created_date    DATE DEFAULT SYSDATE
+  invoice_id       NUMBER(12) PRIMARY KEY,
+  booking_id       NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
+  customer_id      NUMBER(10) NOT NULL REFERENCES customers(customer_id),
+  invoice_number   VARCHAR2(30) NOT NULL UNIQUE,
+  invoice_date     DATE DEFAULT SYSDATE,
+  due_date         DATE,
+  subtotal         NUMBER(12,2) NOT NULL,
+  tax_amount       NUMBER(12,2) DEFAULT 0,
+  discount_amount  NUMBER(12,2) DEFAULT 0,
+  total_amount     NUMBER(12,2) NOT NULL,
+  payment_status   VARCHAR2(20) DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING','PAID','OVERDUE','CANCELLED')),
+  payment_date     DATE,
+  payment_method   VARCHAR2(40),
+  notes            VARCHAR2(500),
+  created_by       VARCHAR2(50) DEFAULT USER,
+  created_date     DATE DEFAULT SYSDATE
 );
 
 -- INVOICE LINE ITEMS
 CREATE TABLE invoice_line_items (
-  line_item_id    NUMBER(12) PRIMARY KEY,
-  invoice_id      NUMBER(12) NOT NULL REFERENCES invoices(invoice_id),
-  item_type       VARCHAR2(20) CHECK (item_type IN ('ROOM','SERVICE','TAX','DISCOUNT','EXTRA_CHARGE')),
+  line_item_id     NUMBER(12) PRIMARY KEY,
+  invoice_id       NUMBER(12) NOT NULL REFERENCES invoices(invoice_id),
+  item_type        VARCHAR2(20) CHECK (item_type IN ('ROOM','SERVICE','TAX','DISCOUNT','EXTRA_CHARGE')),
   item_description VARCHAR2(200),
-  quantity        NUMBER(6,2) DEFAULT 1,
-  unit_price      NUMBER(12,2),
-  line_total      NUMBER(12,2),
-  service_id      NUMBER(10) REFERENCES room_services(service_id),
-  usage_id        NUMBER(12) REFERENCES customer_service_usage(usage_id)
+  quantity         NUMBER(6,2) DEFAULT 1,
+  unit_price       NUMBER(12,2),
+  line_total       NUMBER(12,2),
+  service_id       NUMBER(10) REFERENCES room_services(service_id),
+  usage_id         NUMBER(12) REFERENCES customer_service_usage(usage_id)
 );
 
+-- ======================================================
 -- SEQUENCES
+-- ======================================================
 CREATE SEQUENCE room_type_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE room_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE customer_seq START WITH 1 INCREMENT BY 1 NOCACHE;
@@ -192,11 +202,15 @@ CREATE SEQUENCE usage_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE invoice_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE line_item_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 
--- INDEXES (only for existing columns)
+-- ======================================================
+-- INDEXES
+-- ======================================================
 CREATE INDEX idx_booking_room ON bookings(room_id);
 CREATE INDEX idx_booking_customer ON bookings(customer_id);
 CREATE INDEX idx_booking_status ON bookings(booking_status);
+CREATE INDEX idx_customers_emails  ON customers(email);
 CREATE INDEX idx_service_usage_booking ON customer_service_usage(booking_id);
 CREATE INDEX idx_invoice_customer ON invoices(customer_id);
+CREATE INDEX idx_invoice_booking ON invoices(booking_id);
 
 COMMIT;

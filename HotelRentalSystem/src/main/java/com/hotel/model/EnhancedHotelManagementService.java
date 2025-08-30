@@ -101,7 +101,7 @@ public class EnhancedHotelManagementService {
         double discount = 0.0;
         try {
             VIPMember vipMember = vipMemberDAO.findByCustomerId(booking.getCustomerId());
-            if (vipMember != null && "Y".equals(vipMember.getIsActive())) {
+            if (vipMember != null && vipMember.isActive()) {
                 discount = baseAmount * (vipMember.getDiscountPercentage() / 100.0);
             }
         } catch (SQLException e) {
