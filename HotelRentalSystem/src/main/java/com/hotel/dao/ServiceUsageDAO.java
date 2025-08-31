@@ -51,7 +51,7 @@ public class ServiceUsageDAO {
     public ServiceUsage findById(long usageId) throws SQLException {
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, csu.notes, " +
+                    "csu.is_complimentary, " + // removed csu.notes
                     "rs.service_name, rs.service_category " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
@@ -75,7 +75,7 @@ public class ServiceUsageDAO {
     public List<ServiceUsage> findByCustomerId(int customerId) throws SQLException {
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, csu.notes, " +
+                    "csu.is_complimentary, " + // removed csu.notes
                     "rs.service_name, rs.service_category " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
@@ -101,7 +101,7 @@ public class ServiceUsageDAO {
     public List<ServiceUsage> findByBookingId(long bookingId) throws SQLException {
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, csu.notes, " +
+                    "csu.is_complimentary, " + // removed csu.notes
                     "rs.service_name, rs.service_category " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
@@ -190,11 +190,11 @@ public class ServiceUsageDAO {
         return 0.0;
     }
     
-    // Update service usage
+    // Update service usage (removed notes column)
     public void update(ServiceUsage serviceUsage) throws SQLException {
         String sql = "UPDATE customer_service_usage SET quantity = ?, unit_price = ?, " +
-                    "total_cost = ?, is_complimentary = ?, notes = ? WHERE usage_id = ?";
-        
+                    "total_cost = ?, is_complimentary = ? WHERE usage_id = ?";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
@@ -202,9 +202,8 @@ public class ServiceUsageDAO {
             stmt.setDouble(2, serviceUsage.getUnitPrice());
             stmt.setDouble(3, serviceUsage.getTotalCost());
             stmt.setString(4, serviceUsage.isComplimentary() ? "Y" : "N");
-            stmt.setString(5, serviceUsage.getNotes());
-            stmt.setLong(6, serviceUsage.getUsageId());
-            
+            stmt.setLong(5, serviceUsage.getUsageId());
+
             stmt.executeUpdate();
         }
     }
@@ -225,7 +224,7 @@ public class ServiceUsageDAO {
     public List<ServiceUsage> findByDateRange(Date startDate, Date endDate) throws SQLException {
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, csu.notes, " +
+                    "csu.is_complimentary, " + // removed csu.notes
                     "rs.service_name, rs.service_category " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
@@ -341,7 +340,7 @@ public class ServiceUsageDAO {
         return usages;
     }
 
-    // Helper method to map ResultSet to ServiceUsage object
+    // Helper method to map ResultSet to ServiceUsage object (notes column removed from table)
     private ServiceUsage mapResultSetToServiceUsage(ResultSet rs) throws SQLException {
         ServiceUsage usage = new ServiceUsage();
         usage.setUsageId(rs.getLong("usage_id"));
@@ -353,7 +352,7 @@ public class ServiceUsageDAO {
         usage.setUnitPrice(rs.getDouble("unit_price"));
         usage.setTotalCost(rs.getDouble("total_cost"));
         usage.setComplimentary("Y".equals(rs.getString("is_complimentary")));
-        usage.setNotes(rs.getString("notes"));
+        // notes not stored in DB; leave null (can be populated for summaries elsewhere)
         return usage;
     }
 
