@@ -37,7 +37,8 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
     private JButton cancelBookingButton;
     private JButton viewDetailsButton;
     private JButton refreshButton;
-    
+    private JButton addServiceUsageButton; // New button
+
     // Date range components
     private JTextField startDateField;
     private JTextField endDateField;
@@ -123,7 +124,8 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         cancelBookingButton = new JButton("Cancel Booking");
         viewDetailsButton = new JButton("View Details");
         refreshButton = new JButton("Refresh");
-        
+        addServiceUsageButton = new JButton("Add Service Usage");
+
         // Style buttons
         newBookingButton.setBackground(new Color(34, 139, 34));
         newBookingButton.setForeground(Color.WHITE);
@@ -133,6 +135,8 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         checkOutButton.setForeground(Color.WHITE);
         cancelBookingButton.setBackground(new Color(220, 20, 60));
         cancelBookingButton.setForeground(Color.WHITE);
+        addServiceUsageButton.setBackground(new Color(123, 104, 238));
+        addServiceUsageButton.setForeground(Color.WHITE);
     }
     
     private void layoutComponents() {
@@ -195,6 +199,7 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         panel.add(checkInButton);
         panel.add(checkOutButton);
         panel.add(cancelBookingButton);
+        panel.add(addServiceUsageButton); // New button placement
         panel.add(viewDetailsButton);
         panel.add(refreshButton);
         
@@ -218,7 +223,8 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         cancelBookingButton.addActionListener(e -> cancelBooking());
         viewDetailsButton.addActionListener(e -> viewBookingDetails());
         refreshButton.addActionListener(e -> refreshData());
-        
+        addServiceUsageButton.addActionListener(e -> openAddServiceUsageDialog());
+
         // Table selection
         bookingsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
@@ -301,6 +307,39 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         }
     }
     
+    private void openAddServiceUsageDialog() {
+        int selectedRow = bookingsTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a booking first.");
+            return;
+        }
+        int modelRow = bookingsTable.convertRowIndexToModel(selectedRow);
+        Object bookingIdObj = tableModel.getValueAt(modelRow, 0);
+        long bookingId;
+        if (bookingIdObj instanceof Long) {
+            bookingId = (Long) bookingIdObj;
+        } else if (bookingIdObj instanceof Integer) {
+            bookingId = ((Integer) bookingIdObj).longValue();
+        } else {
+            bookingId = Long.parseLong(bookingIdObj.toString());
+        }
+        try {
+            Booking booking = hotelService.getBookingById((int) bookingId);
+            if (booking == null) {
+                JOptionPane.showMessageDialog(this, "Booking not found.");
+                return;
+            }
+            if (!("CONFIRMED".equals(booking.getBookingStatusString()) || "CHECKED_IN".equals(booking.getBookingStatusString()))) {
+                JOptionPane.showMessageDialog(this, "Services can only be added to CONFIRMED or CHECKED_IN bookings.");
+                return;
+            }
+            AddServiceUsageDialog dialog = new AddServiceUsageDialog((JFrame) SwingUtilities.getWindowAncestor(this), hotelService, booking);
+            dialog.setVisible(true);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error opening service usage dialog: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void performCheckIn() {
         int selectedRow = bookingsTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -473,6 +512,13 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
         checkOutButton.setEnabled(hasSelection);
         cancelBookingButton.setEnabled(hasSelection);
         viewDetailsButton.setEnabled(hasSelection);
+        if (hasSelection) {
+            int modelRow = bookingsTable.convertRowIndexToModel(bookingsTable.getSelectedRow());
+            String status = (String) tableModel.getValueAt(modelRow, 7);
+            addServiceUsageButton.setEnabled("CONFIRMED".equals(status) || "CHECKED_IN".equals(status));
+        } else {
+            addServiceUsageButton.setEnabled(false);
+        }
     }
     
     @Override
@@ -632,5 +678,107 @@ class BookingDetailsDialog extends JDialog {
         
         gbc.gridx = 1;
         panel.add(new JLabel(value != null ? value : "N/A"), gbc);
+    }
+}
+
+// New dialog class for adding service usage to a booking
+class AddServiceUsageDialog extends JDialog {
+    private final EnhancedHotelManagementService hotelService;
+    private final Booking booking;
+    private JComboBox<String> serviceCombo;
+    private JSpinner quantitySpinner;
+    private JButton addButton;
+    private JTable usageTable;
+    private DefaultTableModel usageModel;
+
+    public AddServiceUsageDialog(JFrame parent, EnhancedHotelManagementService hotelService, Booking booking) {
+        super(parent, "Add Service Usage - Booking " + booking.getBookingId(), true);
+        this.hotelService = hotelService;
+        this.booking = booking;
+        init();
+        loadServices();
+        loadExistingUsage();
+    }
+
+    private void init() {
+        setSize(600, 450);
+        setLocationRelativeTo(getParent());
+        setLayout(new BorderLayout(10, 10));
+
+        JPanel form = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        form.add(new JLabel("Service:"));
+        serviceCombo = new JComboBox<>();
+        form.add(serviceCombo);
+        form.add(new JLabel("Quantity:"));
+        quantitySpinner = new JSpinner(new SpinnerNumberModel(1, 1, 50, 1));
+        form.add(quantitySpinner);
+        addButton = new JButton("Add");
+        form.add(addButton);
+        JButton closeBtn = new JButton("Close");
+        form.add(closeBtn);
+        add(form, BorderLayout.NORTH);
+
+        // Usage table
+        usageModel = new DefaultTableModel(new String[]{"Usage ID","Service","Qty","Unit Price","Total","Date"},0){
+            public boolean isCellEditable(int r,int c){return false;}
+        };
+        usageTable = new JTable(usageModel);
+        add(new JScrollPane(usageTable), BorderLayout.CENTER);
+
+        addButton.addActionListener(e -> addServiceUsage());
+        closeBtn.addActionListener(e -> dispose());
+    }
+
+    private void loadServices() {
+        try {
+            serviceCombo.removeAllItems();
+            List<RoomService> services = hotelService.getActiveRoomServices();
+            if (services.isEmpty()) {
+                serviceCombo.addItem("-- No Active Services --");
+                addButton.setEnabled(false);
+            } else {
+                for (RoomService rs : services) {
+                    serviceCombo.addItem(rs.getServiceId() + " - " + rs.getServiceName() + " ($" + String.format("%.2f", rs.getBasePrice()) + ")");
+                }
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading services: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void loadExistingUsage() {
+        try {
+            usageModel.setRowCount(0);
+            List<ServiceUsage> usageList = hotelService.getBookingServiceUsage(booking.getBookingId());
+            for (ServiceUsage u : usageList) {
+                usageModel.addRow(new Object[]{
+                    u.getUsageId(),
+                    u.getServiceName(),
+                    u.getQuantity(),
+                    u.getFormattedUnitPrice(),
+                    u.getFormattedTotalCost(),
+                    u.getUsageDate()
+                });
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error loading usage: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void addServiceUsage() {
+        String selected = (String) serviceCombo.getSelectedItem();
+        if (selected == null || selected.startsWith("--")) {
+            JOptionPane.showMessageDialog(this, "Select a service.");
+            return;
+        }
+        int serviceId = Integer.parseInt(selected.split(" - ")[0].trim());
+        int quantity = (Integer) quantitySpinner.getValue();
+        try {
+            long usageId = hotelService.addServiceUsage(booking.getBookingId(), booking.getCustomerId(), serviceId, quantity);
+            JOptionPane.showMessageDialog(this, "Service usage added (ID: " + usageId + ").");
+            loadExistingUsage();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error adding usage: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
