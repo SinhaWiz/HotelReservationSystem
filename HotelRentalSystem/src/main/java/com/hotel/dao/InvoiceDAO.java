@@ -483,14 +483,14 @@ public class InvoiceDAO {
 
     // ==================== MISSING METHODS ====================
 
-    // Create invoice method
+    // Create invoice method (fixed to include invoice_id)
     public Invoice createInvoice(int customerId, long bookingId) throws SQLException {
-        String sql = "INSERT INTO invoices (customer_id, booking_id, invoice_number, invoice_date, " +
+        String sql = "INSERT INTO invoices (invoice_id, customer_id, booking_id, invoice_number, invoice_date, " +
                     "due_date, subtotal, tax_amount, total_amount, payment_status, created_by) " +
-                    "VALUES (?, ?, ?, SYSDATE, SYSDATE + 30, 0, 0, 0, 'PENDING', 'SYSTEM')";
+                    "VALUES (invoice_seq.NEXTVAL, ?, ?, ?, SYSDATE, SYSDATE + 30, 0, 0, 0, 'PENDING', 'SYSTEM')";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, customerId);
             stmt.setLong(2, bookingId);
@@ -499,9 +499,11 @@ public class InvoiceDAO {
             int rowsAffected = stmt.executeUpdate();
 
             if (rowsAffected > 0) {
-                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        long invoiceId = generatedKeys.getLong(1);
+                // Retrieve generated invoice_id using CURRVAL in same session
+                try (PreparedStatement ps2 = conn.prepareStatement("SELECT invoice_seq.CURRVAL FROM dual");
+                     ResultSet rs2 = ps2.executeQuery()) {
+                    if (rs2.next()) {
+                        long invoiceId = rs2.getLong(1);
                         return findById(invoiceId);
                     }
                 }
@@ -510,14 +512,14 @@ public class InvoiceDAO {
         throw new SQLException("Failed to create invoice");
     }
 
-    // Create invoice with full details
+    // Create invoice with full details (fixed to include invoice_id)
     public Invoice create(Invoice invoice) throws SQLException {
-        String sql = "INSERT INTO invoices (customer_id, booking_id, invoice_number, invoice_date, " +
+        String sql = "INSERT INTO invoices (invoice_id, customer_id, booking_id, invoice_number, invoice_date, " +
                     "due_date, subtotal, tax_amount, discount_amount, total_amount, payment_status, " +
-                    "notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "notes, created_by) VALUES (invoice_seq.NEXTVAL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, invoice.getCustomerId());
             stmt.setLong(2, invoice.getBookingId());
@@ -535,9 +537,10 @@ public class InvoiceDAO {
             int rowsAffected = stmt.executeUpdate();
 
             if (rowsAffected > 0) {
-                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        invoice.setInvoiceId(generatedKeys.getLong(1));
+                try (PreparedStatement ps2 = conn.prepareStatement("SELECT invoice_seq.CURRVAL FROM dual");
+                     ResultSet rs2 = ps2.executeQuery()) {
+                    if (rs2.next()) {
+                        invoice.setInvoiceId(rs2.getLong(1));
                         return invoice;
                     }
                 }
