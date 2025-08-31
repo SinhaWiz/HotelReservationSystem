@@ -2,6 +2,7 @@ package com.hotel.view.panels;
 
 import com.hotel.model.EnhancedHotelManagementService;
 import com.hotel.model.*;
+import com.hotel.view.HotelManagementApp;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
@@ -261,6 +262,10 @@ public class DashboardPanel extends JPanel implements RefreshablePanel {
                         JOptionPane.showMessageDialog(this, "Customer checked out successfully!");
                         refreshData();
                         addActivity("Customer checked out - Booking ID: " + id);
+                        JFrame topFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                        if (topFrame instanceof HotelManagementApp) {
+                            ((HotelManagementApp) topFrame).refreshReportsQuickStats();
+                        }
                     } else {
                         JOptionPane.showMessageDialog(this, "Check-out failed. Please verify booking ID and status.");
                     }
