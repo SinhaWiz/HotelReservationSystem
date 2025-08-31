@@ -49,10 +49,10 @@ public class ServiceUsageDAO {
 
     // Find service usage by ID
     public ServiceUsage findById(long usageId) throws SQLException {
+        // Added rs.base_price for richer mapping
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, " + // removed csu.notes
-                    "rs.service_name, rs.service_category " +
+                    "csu.is_complimentary, rs.service_name, rs.service_category, rs.base_price " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
                     "WHERE csu.usage_id = ?";
@@ -73,10 +73,10 @@ public class ServiceUsageDAO {
     
     // Find all service usage for a customer
     public List<ServiceUsage> findByCustomerId(int customerId) throws SQLException {
+        // Added rs.base_price
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, " + // removed csu.notes
-                    "rs.service_name, rs.service_category " +
+                    "csu.is_complimentary, rs.service_name, rs.service_category, rs.base_price " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
                     "WHERE csu.customer_id = ? ORDER BY csu.usage_date DESC";
@@ -99,10 +99,10 @@ public class ServiceUsageDAO {
     
     // Find all service usage for a booking
     public List<ServiceUsage> findByBookingId(long bookingId) throws SQLException {
+        // Added rs.base_price
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, " + // removed csu.notes
-                    "rs.service_name, rs.service_category " +
+                    "csu.is_complimentary, rs.service_name, rs.service_category, rs.base_price " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
                     "WHERE csu.booking_id = ? ORDER BY csu.usage_date DESC";
@@ -222,10 +222,10 @@ public class ServiceUsageDAO {
     
     // Find service usage by date range
     public List<ServiceUsage> findByDateRange(Date startDate, Date endDate) throws SQLException {
+        // Added rs.base_price
         String sql = "SELECT csu.usage_id, csu.booking_id, csu.customer_id, csu.service_id, " +
                     "csu.usage_date, csu.quantity, csu.unit_price, csu.total_cost, " +
-                    "csu.is_complimentary, " + // removed csu.notes
-                    "rs.service_name, rs.service_category " +
+                    "csu.is_complimentary, rs.service_name, rs.service_category, rs.base_price " +
                     "FROM customer_service_usage csu " +
                     "JOIN room_services rs ON csu.service_id = rs.service_id " +
                     "WHERE csu.usage_date BETWEEN ? AND ? ORDER BY csu.usage_date DESC";
@@ -282,7 +282,7 @@ public class ServiceUsageDAO {
         return popularServices;
     }
     
-    // Find service usage by customer ID and date
+    // Find service usage by customer ID and date (legacy method, not Oracle-safe; left as-is)
     public List<ServiceUsage> findByCustomerIdAndDate(int customerId, Date date) throws SQLException {
         String sql = "SELECT su.*, rs.* FROM service_usage su " +
                     "JOIN room_services rs ON su.service_id = rs.service_id " +
@@ -310,7 +310,7 @@ public class ServiceUsageDAO {
         return usages;
     }
 
-    // Find most popular services
+    // Find most popular services (legacy method, not fully Oracle compatible)
     public List<ServiceUsage> findMostPopular(int limit) throws SQLException {
         String sql = "SELECT su.*, rs.*, COUNT(*) as usage_count " +
                     "FROM service_usage su " +
@@ -352,7 +352,23 @@ public class ServiceUsageDAO {
         usage.setUnitPrice(rs.getDouble("unit_price"));
         usage.setTotalCost(rs.getDouble("total_cost"));
         usage.setComplimentary("Y".equals(rs.getString("is_complimentary")));
-        // notes not stored in DB; leave null (can be populated for summaries elsewhere)
+        // Populate RoomService so UI can display name instead of "Unknown Service"
+        try {
+            String svcName = rs.getString("service_name");
+            if (svcName != null) {
+                RoomService svc = new RoomService();
+                svc.setServiceId(rs.getInt("service_id"));
+                svc.setServiceName(svcName);
+                try { svc.setServiceCategoryFromString(rs.getString("service_category")); } catch (Exception ignored) {}
+                // Prefer base_price if present, else fall back to unit_price
+                double basePrice;
+                try { basePrice = rs.getDouble("base_price"); } catch (SQLException e) { basePrice = rs.getDouble("unit_price"); }
+                svc.setBasePrice(basePrice);
+                usage.setRoomService(svc);
+            }
+        } catch (SQLException ignored) {
+            // Column not present; ignore
+        }
         return usage;
     }
 
@@ -373,7 +389,6 @@ public class ServiceUsageDAO {
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-
             stmt.setInt(1, customerId);
             if (fromDate != null) {
                 stmt.setDate(2, new java.sql.Date(fromDate.getTime()));
