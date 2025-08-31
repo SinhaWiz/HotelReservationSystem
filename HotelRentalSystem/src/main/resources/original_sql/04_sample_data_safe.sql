@@ -1,13 +1,4 @@
--- ======================================================
--- Hotel Reservation System - Sample Data (Safe for Multiple Runs)
--- File: 04_sample_data.sql
--- Purpose: Insert sample data for testing and demonstration
--- Note: Safe to run multiple times - checks for existing data
--- ======================================================
 
--- ======================================================
--- ROOM TYPESA
--- ======================================================
 INSERT INTO room_types(type_id, type_name, base_price, max_occupancy, amenities, description)
 SELECT room_type_seq.NEXTVAL, 'STANDARD', 100.00, 2, 'WiFi,TV,Air Conditioning', 'Standard room with basic amenities'
 FROM dual WHERE NOT EXISTS (SELECT 1 FROM room_types WHERE type_name = 'STANDARD');
@@ -268,10 +259,7 @@ FROM dual WHERE NOT EXISTS (
 
 COMMIT;
 
--- Display summary of inserted data
-PROMPT ======================================================
-PROMPT Sample Data Insertion Summary
-PROMPT ======================================================
+
 SELECT 'Data insertion completed successfully!' as status FROM dual;
 
 SELECT 'Room Types: ' || COUNT(*) as summary FROM room_types
@@ -290,6 +278,3 @@ SELECT 'Bookings: ' || COUNT(*) FROM bookings
 UNION ALL
 SELECT 'Service Usage Records: ' || COUNT(*) FROM customer_service_usage;
 
-PROMPT ======================================================
-PROMPT Sample data script completed. Safe to run multiple times.
-PROMPT ======================================================

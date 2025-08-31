@@ -629,4 +629,26 @@ BEGIN
 END get_customer_service_summary;
 /
 
+-- ======================================================
+-- REPORTING / ANALYTICS FUNCTIONS
+-- ======================================================
+
+-- Total revenue from all completed (checked-out) bookings.
+-- Revenue definition: net room charge (already discounted) + services_total + extra_charges.
+-- (Discount already applied inside total_amount; discount_applied column is informational.)
+CREATE OR REPLACE FUNCTION get_total_revenue
+RETURN NUMBER IS
+    v_total NUMBER := 0;
+BEGIN
+    SELECT NVL(SUM(total_amount + NVL(services_total,0) + NVL(extra_charges,0)),0)
+      INTO v_total
+      FROM bookings
+     WHERE booking_status = 'CHECKED_OUT';
+    RETURN v_total;
+EXCEPTION
+    WHEN OTHERS THEN
+        RETURN 0; -- Fail-safe
+END get_total_revenue;
+/
+
 COMMIT;
