@@ -8,9 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object for Invoice operations
- */
+
 public class InvoiceDAO {
     
     // Generate invoice using stored procedure

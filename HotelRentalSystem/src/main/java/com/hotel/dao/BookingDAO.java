@@ -426,10 +426,9 @@ public class BookingDAO {
                 booking.getCustomer().setCustomerId(booking.getCustomerId());
             }
         } catch (SQLException e) {
-            // Column not found, which is okay for non-JOIN queries
+
         }
 
-        // Check if room data is available (for JOINed queries)
         try {
             String roomNumber = rs.getString("room_number");
             int typeId = rs.getInt("type_id");

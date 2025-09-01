@@ -7,17 +7,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/**
- * Fixed version of the checkOutCustomer method to properly:
- * 1. Update payment status to PAID
- * 2. Track revenue by updating customer's total_spent
- * 3. Generate invoice if needed
- */
+
 public class BookingDAOFix {
 
-    /**
-     * Replace the existing checkOutCustomer method in BookingDAO.java with this improved version
-     */
+
     public boolean checkOutCustomer(int bookingId) throws SQLException {
         Connection conn = null;
         PreparedStatement bookingStmt = null;
@@ -55,7 +48,6 @@ public class BookingDAOFix {
                 revenueStmt.setInt(3, bookingId);
                 revenueStmt.executeUpdate();
 
-                // 3. Check if invoice exists, if not generate one
                 try {
                     invoiceCheckStmt = conn.prepareStatement(
                             "SELECT COUNT(*) FROM invoices WHERE booking_id = ?");

@@ -7,14 +7,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Data Access Object for Customer operations
- */
+
 public class CustomerDAO {
-    
-    /**
-     * Create a new customer
-     */
     public Customer create(Customer customer) throws SQLException {
         String sql = "INSERT INTO customers (customer_id, first_name, last_name, email, phone, " +
                     "address, date_of_birth, total_spent, loyalty_points) " +
@@ -248,10 +242,7 @@ public class CustomerDAO {
             DatabaseConnection.closeResources(conn, pstmt, rs);
         }
     }
-    
-    /**
-     * Get customers eligible for VIP membership
-     */
+
     public List<Customer> getVIPEligibleCustomers(double spendingThreshold) throws SQLException {
         String sql = "SELECT c.customer_id, c.first_name, c.last_name, c.email, c.phone, " +
                     "c.address, c.date_of_birth, c.total_spent, c.registration_date, " +
@@ -283,10 +274,7 @@ public class CustomerDAO {
             DatabaseConnection.closeResources(conn, pstmt, rs);
         }
     }
-    
-    /**
-     * Get customer discount using Oracle function
-     */
+
     public double getCustomerDiscount(int customerId) throws SQLException {
         String sql = "{? = call calculate_customer_discount(?)}";
         
@@ -374,9 +362,6 @@ public class CustomerDAO {
         return customers;
     }
 
-    /**
-     * Find customers eligible for VIP membership based on activity
-     */
     public List<Customer> findVIPEligible() throws SQLException {
         String sql = "SELECT c.* FROM customers c " +
                     "JOIN bookings b ON c.customer_id = b.customer_id " +
@@ -396,11 +381,6 @@ public class CustomerDAO {
         return customers;
     }
 
-    // ==================== MISSING METHODS ====================
-
-    /**
-     * Delete customer (hard delete method)
-     */
     public void delete(int customerId) throws SQLException {
         String sql = "DELETE FROM customers WHERE customer_id = ?";
 
