@@ -103,7 +103,7 @@ public class VIPMemberPanel extends JPanel {
         deactivateButton = new JButton("Deactivate");
         processRenewalsButton = new JButton("Process Renewals");
         refreshButton = new JButton("Refresh");
-        
+        //
         // Style buttons (retain backgrounds but unify font/foreground per requirement)
         processRenewalsButton.setBackground(new Color(70, 130, 180));
         deactivateButton.setBackground(new Color(220, 20, 60));
