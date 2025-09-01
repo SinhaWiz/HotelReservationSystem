@@ -1,6 +1,7 @@
 package com.hotel.view.panels;
 
 import com.hotel.model.*;
+import com.hotel.view.HotelManagementApp;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -424,6 +425,10 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
             if (success) {
                 JOptionPane.showMessageDialog(this, "Customer checked out successfully!");
                 refreshData();
+                JFrame topFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                if (topFrame instanceof HotelManagementApp) {
+                    ((HotelManagementApp) topFrame).refreshReportsQuickStats();
+                }
             } else {
                 JOptionPane.showMessageDialog(this, "Check-out failed. Please try again.");
             }

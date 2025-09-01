@@ -316,15 +316,56 @@ public class BookingDAO {
     }
 
     public boolean checkOutCustomer(int bookingId) throws SQLException {
-        String sql = "UPDATE bookings SET booking_status = 'CHECKED_OUT', " +
-                    "actual_check_out = SYSDATE WHERE booking_id = ? " +
-                    "AND booking_status = 'CHECKED_IN'";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, bookingId);
-            return pstmt.executeUpdate() > 0;
+        Connection conn = null;
+        PreparedStatement bookingStmt = null;
+        PreparedStatement revenueStmt = null;
+        PreparedStatement invoiceCheckStmt = null;
+        CallableStatement invoiceStmt = null;
+        ResultSet rs = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
+            String bookingUpdateSql = "UPDATE bookings SET booking_status = 'CHECKED_OUT', payment_status = 'PAID', actual_check_out = SYSDATE WHERE booking_id = ? AND booking_status = 'CHECKED_IN'";
+            bookingStmt = conn.prepareStatement(bookingUpdateSql);
+            bookingStmt.setInt(1, bookingId);
+            int updatedRows = bookingStmt.executeUpdate();
+            if (updatedRows > 0) {
+                String revenueSql = "UPDATE customers c SET c.total_spent = c.total_spent + (SELECT b.total_amount + NVL(b.services_total,0) + NVL(b.extra_charges,0) - NVL(b.discount_applied,0) FROM bookings b WHERE b.booking_id = ?), c.loyalty_points = c.loyalty_points + FLOOR((SELECT b.total_amount + NVL(b.services_total,0) + NVL(b.extra_charges,0) - NVL(b.discount_applied,0) FROM bookings b WHERE b.booking_id = ?) / 10) WHERE c.customer_id = (SELECT customer_id FROM bookings WHERE booking_id = ?)";
+                revenueStmt = conn.prepareStatement(revenueSql);
+                revenueStmt.setInt(1, bookingId);
+                revenueStmt.setInt(2, bookingId);
+                revenueStmt.setInt(3, bookingId);
+                revenueStmt.executeUpdate();
+                try {
+                    invoiceCheckStmt = conn.prepareStatement("SELECT COUNT(*) FROM invoices WHERE booking_id = ?");
+                    invoiceCheckStmt.setInt(1, bookingId);
+                    rs = invoiceCheckStmt.executeQuery();
+                    boolean invoiceExists = false;
+                    if (rs.next()) invoiceExists = rs.getInt(1) > 0;
+                    if (!invoiceExists) {
+                        invoiceStmt = conn.prepareCall("{call generate_invoice(?)}");
+                        invoiceStmt.setInt(1, bookingId);
+                        invoiceStmt.execute();
+                    }
+                } catch (Exception e) {
+                    System.err.println("Warning: Invoice generation failed: " + e.getMessage());
+                }
+                conn.commit();
+                return true;
+            } else {
+                conn.rollback();
+                return false;
+            }
+        } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ignored) {}
+            throw e;
+        } finally {
+            if (rs != null) try { rs.close(); } catch (SQLException ignored) {}
+            if (invoiceStmt != null) try { invoiceStmt.close(); } catch (SQLException ignored) {}
+            if (invoiceCheckStmt != null) try { invoiceCheckStmt.close(); } catch (SQLException ignored) {}
+            if (revenueStmt != null) try { revenueStmt.close(); } catch (SQLException ignored) {}
+            if (bookingStmt != null) try { bookingStmt.close(); } catch (SQLException ignored) {}
+            if (conn != null) try { conn.setAutoCommit(true); conn.close(); } catch (SQLException ignored) {}
         }
     }
 
@@ -403,6 +444,20 @@ public class BookingDAO {
         } catch (SQLException e) {
             // Column not found, which is okay for non-JOIN queries
         }
+
+        // NEW: map payment status & actual check-in/out timestamps if present
+        try {
+            String paymentStatus = rs.getString("payment_status");
+            if (paymentStatus != null) booking.setPaymentStatus(paymentStatus);
+        } catch (SQLException ignore) {}
+        try {
+            Timestamp actIn = rs.getTimestamp("actual_check_in");
+            if (actIn != null) booking.setActualCheckIn(new Date(actIn.getTime()));
+        } catch (SQLException ignore) {}
+        try {
+            Timestamp actOut = rs.getTimestamp("actual_check_out");
+            if (actOut != null) booking.setActualCheckOut(new Date(actOut.getTime()));
+        } catch (SQLException ignore) {}
 
         return booking;
     }

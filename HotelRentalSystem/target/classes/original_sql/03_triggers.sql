@@ -69,16 +69,10 @@ CREATE OR REPLACE TRIGGER trg_customer_spending_update
     FOR EACH ROW
     WHEN (NEW.total_spent > OLD.total_spent)
 BEGIN
-    -- Update VIP status when spending thresholds are met
-    IF :NEW.total_spent >= 5000 AND :OLD.total_spent < 5000 THEN
-        update_vip_status(:NEW.customer_id);
-    ELSIF :NEW.total_spent >= 10000 AND :OLD.total_spent < 10000 THEN
-        update_vip_status(:NEW.customer_id);
-    ELSIF :NEW.total_spent >= 20000 AND :OLD.total_spent < 20000 THEN
-        update_vip_status(:NEW.customer_id);
-    END IF;
+    update_vip_status(:NEW.customer_id, :NEW.total_spent);
 END;
 /
+
 
 -- Update loyalty points when customer total spending increases
 CREATE OR REPLACE TRIGGER trg_update_loyalty_points

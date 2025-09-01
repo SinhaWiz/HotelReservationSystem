@@ -359,6 +359,12 @@ public class HotelManagementApp extends JFrame {
         }
     }
     
+    public void refreshReportsQuickStats() {
+        if (reportsPanel != null) {
+            reportsPanel.refreshData();
+        }
+    }
+
     public static void main(String[] args) {
         // Set system properties for better UI
         System.setProperty("awt.useSystemAAFontSettings", "on");
