@@ -1,10 +1,4 @@
--- ======================================================
--- Hotel Reservation System - Database Schema
--- File: 01_schema.sql
--- Purpose: Create all tables, sequences, and constraints
--- ======================================================
 
--- Drop existing objects for clean installation
 BEGIN
   FOR t IN (SELECT table_name FROM user_tables WHERE table_name IN (
     'INVOICE_LINE_ITEMS','INVOICES','CUSTOMER_SERVICE_USAGE','ROOM_SERVICE_ASSIGNMENTS',
@@ -34,11 +28,6 @@ CREATE SEQUENCE usage_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE invoice_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE line_item_seq START WITH 1 INCREMENT BY 1 NOCACHE;
 
--- ======================================================
--- CORE TABLES
--- ======================================================
-
--- Room Types
 CREATE TABLE room_types (
   type_id        NUMBER(10) PRIMARY KEY,
   type_name      VARCHAR2(50) NOT NULL UNIQUE,
@@ -49,7 +38,7 @@ CREATE TABLE room_types (
   created_date   DATE DEFAULT SYSDATE
 );
 
--- Rooms
+
 CREATE TABLE rooms (
   room_id         NUMBER(10) PRIMARY KEY,
   room_number     VARCHAR2(10) NOT NULL UNIQUE,
@@ -66,7 +55,6 @@ CREATE TABLE rooms (
   created_date    DATE DEFAULT SYSDATE
 );
 
--- Customers
 CREATE TABLE customers (
   customer_id      NUMBER(10) PRIMARY KEY,
   first_name       VARCHAR2(50) NOT NULL,
@@ -83,7 +71,7 @@ CREATE TABLE customers (
   last_updated     DATE
 );
 
--- VIP Members
+
 CREATE TABLE vip_members (
   vip_id              NUMBER(10) PRIMARY KEY,
   customer_id         NUMBER(10) NOT NULL REFERENCES customers(customer_id),
@@ -96,7 +84,7 @@ CREATE TABLE vip_members (
   is_active           CHAR(1) DEFAULT 'Y' CHECK (is_active IN ('Y','N'))
 );
 
--- Bookings
+
 CREATE TABLE bookings (
   booking_id        NUMBER(10) PRIMARY KEY,
   customer_id       NUMBER(10) NOT NULL REFERENCES customers(customer_id),
@@ -121,7 +109,7 @@ CREATE TABLE bookings (
   CONSTRAINT chk_booking_dates CHECK (check_out_date > check_in_date)
 );
 
--- Booking Archive
+
 CREATE TABLE booking_archive (
   archive_id        NUMBER(10) PRIMARY KEY,
   booking_id        NUMBER(10),
@@ -141,7 +129,6 @@ CREATE TABLE booking_archive (
   archived_date     DATE DEFAULT SYSDATE
 );
 
--- Room Services
 CREATE TABLE room_services (
   service_id          NUMBER(10) PRIMARY KEY,
   service_name        VARCHAR2(100) NOT NULL UNIQUE,
@@ -152,7 +139,6 @@ CREATE TABLE room_services (
   created_date        DATE DEFAULT SYSDATE
 );
 
--- Room Service Assignments
 CREATE TABLE room_service_assignments (
   assignment_id    NUMBER(10) PRIMARY KEY,
   room_type_id     NUMBER(10) NOT NULL REFERENCES room_types(type_id),
@@ -161,7 +147,6 @@ CREATE TABLE room_service_assignments (
   CONSTRAINT uk_rsa UNIQUE (room_type_id, service_id)
 );
 
--- Customer Service Usage
 CREATE TABLE customer_service_usage (
   usage_id         NUMBER(12) PRIMARY KEY,
   booking_id       NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
@@ -174,7 +159,6 @@ CREATE TABLE customer_service_usage (
   is_complimentary CHAR(1) DEFAULT 'N' CHECK (is_complimentary IN ('Y','N'))
 );
 
--- Invoices
 CREATE TABLE invoices (
   invoice_id       NUMBER(12) PRIMARY KEY,
   booking_id       NUMBER(10) NOT NULL REFERENCES bookings(booking_id),
@@ -195,7 +179,6 @@ CREATE TABLE invoices (
   created_date     DATE DEFAULT SYSDATE
 );
 
--- Invoice Line Items
 CREATE TABLE invoice_line_items (
   line_item_id     NUMBER(12) PRIMARY KEY,
   invoice_id       NUMBER(12) NOT NULL REFERENCES invoices(invoice_id),
@@ -209,9 +192,7 @@ CREATE TABLE invoice_line_items (
   usage_id         NUMBER(12) REFERENCES customer_service_usage(usage_id)
 );
 
--- ======================================================
--- INDEXES FOR PERFORMANCE
--- ======================================================
+
 CREATE INDEX idx_rooms_type ON rooms(type_id);
 CREATE INDEX idx_rooms_status ON rooms(status);
 CREATE INDEX idx_bookings_customer ON bookings(customer_id);

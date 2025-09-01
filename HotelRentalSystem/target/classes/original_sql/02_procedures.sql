@@ -1,14 +1,4 @@
--- ======================================================
--- Hotel Reservation System - Stored Procedures and Functions
--- File: 02_procedures.sql
--- Purpose: Create all stored procedures and functions
--- ======================================================
 
--- ======================================================
--- UTILITY FUNCTIONS
--- ======================================================
-
--- Calculate stay duration in days
 CREATE OR REPLACE FUNCTION calculate_stay_days(
     p_check_in DATE,
     p_check_out DATE
@@ -18,7 +8,6 @@ BEGIN
 END calculate_stay_days;
 /
 
--- Calculate room price for a stay with VIP discount
 CREATE OR REPLACE FUNCTION calculate_room_price(
     p_room_id IN NUMBER,
     p_check_in IN DATE,
@@ -55,7 +44,7 @@ EXCEPTION
 END calculate_room_price;
 /
 
--- Check if customer is VIP
+
 CREATE OR REPLACE FUNCTION is_customer_vip(
     p_customer_id IN NUMBER
 ) RETURN CHAR AS
@@ -74,7 +63,6 @@ BEGIN
 END is_customer_vip;
 /
 
--- Get VIP discount percentage
 CREATE OR REPLACE FUNCTION get_vip_discount(
     p_customer_id IN NUMBER
 ) RETURN NUMBER AS
@@ -92,11 +80,7 @@ EXCEPTION
 END get_vip_discount;
 /
 
--- ======================================================
--- BOOKING MANAGEMENT PROCEDURES
--- ======================================================
 
--- Create a new booking
 CREATE OR REPLACE PROCEDURE create_booking(
     p_customer_id IN NUMBER,
     p_room_id IN NUMBER,
@@ -133,7 +117,6 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20002, 'Room is not available for the selected dates');
     END IF;
 
-    -- Get room price and check VIP status
     SELECT base_price INTO v_base_price FROM rooms WHERE room_id = p_room_id;
     v_is_vip := is_customer_vip(p_customer_id);
 
@@ -141,10 +124,9 @@ BEGIN
         v_discount_pct := get_vip_discount(p_customer_id);
     END IF;
 
-    -- Calculate total amount
+
     v_total_amount := calculate_room_price(p_room_id, p_check_in_date, p_check_out_date, v_is_vip, v_discount_pct);
 
-    -- Create booking
     p_booking_id := booking_seq.NEXTVAL;
 
     INSERT INTO bookings (
@@ -164,7 +146,7 @@ EXCEPTION
 END create_booking;
 /
 
--- Check in a customer
+
 CREATE OR REPLACE PROCEDURE check_in_customer(
     p_booking_id IN NUMBER,
     p_checked_in_by IN VARCHAR2 DEFAULT USER,
@@ -176,24 +158,24 @@ CREATE OR REPLACE PROCEDURE check_in_customer(
 BEGIN
     p_success := 0;
 
-    -- Get booking details
+
     SELECT booking_status, room_id, check_in_date
     INTO v_booking_status, v_room_id, v_check_in_date
     FROM bookings
     WHERE booking_id = p_booking_id;
 
-    -- Check if booking is in correct status
+
     IF v_booking_status != 'CONFIRMED' THEN
         RAISE_APPLICATION_ERROR(-20003, 'Booking must be CONFIRMED to check in');
     END IF;
 
-    -- Update booking status
+
     UPDATE bookings
     SET booking_status = 'CHECKED_IN',
         actual_check_in = SYSDATE
     WHERE booking_id = p_booking_id;
 
-    -- Update room status
+
     UPDATE rooms
     SET status = 'OCCUPIED'
     WHERE room_id = v_room_id;
@@ -209,7 +191,7 @@ EXCEPTION
 END check_in_customer;
 /
 
--- Check out a customer
+
 CREATE OR REPLACE PROCEDURE check_out_customer(
     p_booking_id IN NUMBER,
     p_late_checkout_hours IN NUMBER DEFAULT 0,
@@ -222,18 +204,18 @@ CREATE OR REPLACE PROCEDURE check_out_customer(
 BEGIN
     p_success := 0;
 
-    -- Get booking details
+
     SELECT booking_status, room_id
     INTO v_booking_status, v_room_id
     FROM bookings
     WHERE booking_id = p_booking_id;
 
-    -- Check if booking is in correct status
+
     IF v_booking_status != 'CHECKED_IN' THEN
         RAISE_APPLICATION_ERROR(-20005, 'Booking must be CHECKED_IN to check out');
     END IF;
 
-    -- Update booking status
+
     UPDATE bookings
     SET booking_status = 'CHECKED_OUT',
         actual_check_out = SYSDATE,
@@ -258,11 +240,7 @@ EXCEPTION
 END check_out_customer;
 /
 
--- ======================================================
--- VIP MANAGEMENT PROCEDURES
--- ======================================================
 
--- Update customer VIP status based on spending
 CREATE OR REPLACE PROCEDURE update_vip_status(
     p_customer_id IN NUMBER,
     p_total_spent IN NUMBER
@@ -282,12 +260,12 @@ BEGIN
         v_new_level := 'GOLD';
         v_new_discount := 10;
     ELSE
-        -- Not eligible for VIP -> remove if exists (safe DML on different table)
+
         DELETE FROM vip_members WHERE customer_id = p_customer_id;
         RETURN;
     END IF;
 
-    -- Check if customer is already VIP
+
     SELECT COUNT(*) INTO v_existing_vip
     FROM vip_members
     WHERE customer_id = p_customer_id;
@@ -306,19 +284,15 @@ BEGIN
             discount_percentage = v_new_discount
         WHERE customer_id = p_customer_id;
     END IF;
-    -- No COMMIT here (controlled by outer transaction). No ROLLBACK.
+
 EXCEPTION
     WHEN OTHERS THEN
-        -- Re-raise without transaction control (trigger-safe)
+
         RAISE;
 END update_vip_status;
 /
 
--- ======================================================
--- INVOICE MANAGEMENT PROCEDURES
--- ======================================================
 
--- Generate invoice for a booking
 CREATE OR REPLACE PROCEDURE generate_invoice(
     p_booking_id IN NUMBER,
     p_tax_rate IN NUMBER DEFAULT 8,
@@ -346,7 +320,7 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20007, 'Booking not found');
     END IF;
 
-    -- Check if invoice already exists
+
     SELECT COUNT(*) INTO v_invoice_exists
     FROM invoices
     WHERE booking_id = p_booking_id;
@@ -355,14 +329,14 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20008, 'Invoice already exists for this booking');
     END IF;
 
-    -- Get booking details
+
     SELECT customer_id, total_amount, NVL(discount_applied, 0),
            NVL(extra_charges, 0), NVL(services_total, 0)
     INTO v_customer_id, v_room_charge, v_discount_amount, v_extra_charges, v_service_total
     FROM bookings
     WHERE booking_id = p_booking_id;
 
-    -- Calculate invoice amounts
+
     v_subtotal := v_room_charge + v_service_total + v_extra_charges;
     v_tax_amount := v_subtotal * (p_tax_rate / 100);
     v_total_amount := v_subtotal + v_tax_amount - v_discount_amount;
@@ -437,11 +411,7 @@ EXCEPTION
 END generate_invoice;
 /
 
--- ======================================================
--- SERVICE MANAGEMENT PROCEDURES
--- ======================================================
 
--- Add service usage for a booking
 CREATE OR REPLACE PROCEDURE add_service_usage(
     p_booking_id IN NUMBER,
     p_customer_id IN NUMBER,
@@ -473,19 +443,17 @@ BEGIN
             RETURN;
     END;
 
-    -- Check if booking is active (confirmed or checked in)
     IF v_booking_status NOT IN ('CONFIRMED', 'CHECKED_IN') THEN
         p_message := 'Services can only be added to confirmed or active bookings';
         RETURN;
     END IF;
 
-    -- Verify customer matches booking
+
     IF v_booking_customer_id != p_customer_id THEN
         p_message := 'Customer does not match booking';
         RETURN;
     END IF;
 
-    -- Get service price and check if service exists
     BEGIN
         SELECT base_price INTO v_service_price
         FROM room_services
@@ -496,7 +464,6 @@ BEGIN
             RETURN;
     END;
 
-    -- Check if service is complimentary for this room type
     BEGIN
         SELECT rt.type_id INTO v_room_type_id
         FROM bookings b
@@ -512,14 +479,14 @@ BEGIN
             v_is_complimentary := 'N';
     END;
 
-    -- Calculate total cost
+
     IF v_is_complimentary = 'Y' THEN
         v_total_cost := 0;
     ELSE
         v_total_cost := v_service_price * p_quantity;
     END IF;
 
-    -- Create service usage record
+
     p_usage_id := usage_seq.NEXTVAL;
 
     INSERT INTO customer_service_usage (
@@ -542,7 +509,7 @@ EXCEPTION
 END add_service_usage;
 /
 
--- Get available services for a booking
+
 CREATE OR REPLACE PROCEDURE get_available_services(
     p_booking_id IN NUMBER,
     p_services_cursor OUT SYS_REFCURSOR,
@@ -553,7 +520,7 @@ CREATE OR REPLACE PROCEDURE get_available_services(
 BEGIN
     p_success := 0;
 
-    -- Get room type for the booking
+
     BEGIN
         SELECT rt.type_id INTO v_room_type_id
         FROM bookings b
@@ -566,7 +533,7 @@ BEGIN
             RETURN;
     END;
 
-    -- Get all services available for this room type
+
     OPEN p_services_cursor FOR
         SELECT rs.service_id, rs.service_name, rs.service_description,
                rs.service_category, rs.base_price,
@@ -598,7 +565,7 @@ BEGIN
     p_success := 0;
     p_total_cost := 0;
 
-    -- Get service usage summary
+
     OPEN p_service_cursor FOR
         SELECT rs.service_name, rs.service_category,
                SUM(csu.quantity) as total_quantity,
@@ -621,13 +588,6 @@ BEGIN
 END get_customer_service_summary;
 /
 
--- ======================================================
--- REPORTING / ANALYTICS FUNCTIONS
--- ======================================================
-
--- Total revenue from all completed (checked-out) bookings.
--- Revenue definition: net room charge (already discounted) + services_total + extra_charges.
--- (Discount already applied inside total_amount; discount_applied column is informational.)
 CREATE OR REPLACE FUNCTION get_total_revenue
 RETURN NUMBER IS
     v_total NUMBER := 0;
