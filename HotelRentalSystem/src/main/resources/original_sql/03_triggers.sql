@@ -1,14 +1,4 @@
--- ======================================================
--- Hotel Reservation System - Triggers
--- File: 03_triggers.sql
--- Purpose: Create all database triggers for business logic
--- ======================================================
 
--- ======================================================
--- BOOKING MANAGEMENT TRIGGERS
--- ======================================================
-
--- Automatically update room status when booking status changes
 CREATE OR REPLACE TRIGGER trg_booking_status_change
     AFTER UPDATE OF booking_status ON bookings
     FOR EACH ROW
@@ -28,7 +18,6 @@ BEGIN
 END;
 /
 
--- Prevent deleting active bookings
 CREATE OR REPLACE TRIGGER trg_prevent_active_booking_delete
     BEFORE DELETE ON bookings
     FOR EACH ROW
@@ -39,7 +28,7 @@ BEGIN
 END;
 /
 
--- Prevent changes to checked-out bookings
+
 CREATE OR REPLACE TRIGGER trg_prevent_completed_booking_update
     BEFORE UPDATE ON bookings
     FOR EACH ROW
@@ -50,11 +39,7 @@ BEGIN
 END;
 /
 
--- ======================================================
--- CUSTOMER MANAGEMENT TRIGGERS
--- ======================================================
 
--- Automatically update last_updated timestamp in customers table
 CREATE OR REPLACE TRIGGER trg_customer_last_updated
     BEFORE UPDATE ON customers
     FOR EACH ROW
@@ -63,7 +48,7 @@ BEGIN
 END;
 /
 
--- Automatically update customer VIP status when total spent increases
+
 CREATE OR REPLACE TRIGGER trg_customer_spending_update
     AFTER UPDATE OF total_spent ON customers
     FOR EACH ROW
@@ -74,7 +59,7 @@ END;
 /
 
 
--- Update loyalty points when customer total spending increases
+
 CREATE OR REPLACE TRIGGER trg_update_loyalty_points
     BEFORE UPDATE OF total_spent ON customers
     FOR EACH ROW
@@ -85,11 +70,6 @@ BEGIN
 END;
 /
 
--- ======================================================
--- INVOICE MANAGEMENT TRIGGERS
--- ======================================================
-
--- Update customer total spent when invoice is paid
 CREATE OR REPLACE TRIGGER trg_invoice_payment_update
     AFTER UPDATE OF payment_status ON invoices
     FOR EACH ROW
@@ -102,7 +82,6 @@ BEGIN
 END;
 /
 
--- Automatically set payment date when invoice is marked as paid
 CREATE OR REPLACE TRIGGER trg_invoice_payment_date
     BEFORE UPDATE OF payment_status ON invoices
     FOR EACH ROW
@@ -112,12 +91,6 @@ BEGIN
 END;
 /
 
--- ======================================================
--- SERVICE USAGE TRIGGERS
--- ======================================================
-
--- NOTE: Original row-level trigger querying CUSTOMER_SERVICE_USAGE caused ORA-04091 (mutating table).
--- Replaced with a compound trigger collecting affected booking_ids and updating after statement.
 CREATE OR REPLACE TRIGGER trg_update_services_total
 FOR INSERT OR UPDATE OR DELETE ON customer_service_usage
 COMPOUND TRIGGER
@@ -159,11 +132,6 @@ END AFTER STATEMENT;
 END;
 /
 
--- ======================================================
--- ROOM MAINTENANCE TRIGGERS
--- ======================================================
-
--- Update last maintenance date when room status changes to maintenance
 CREATE OR REPLACE TRIGGER trg_room_maintenance_date
     BEFORE UPDATE OF status ON rooms
     FOR EACH ROW
@@ -191,11 +159,6 @@ BEGIN
 END;
 /
 
--- ======================================================
--- ARCHIVE MANAGEMENT TRIGGERS
--- ======================================================
-
--- Archive completed bookings after check-out (with delay)
 CREATE OR REPLACE TRIGGER trg_schedule_booking_archive
     AFTER UPDATE OF booking_status ON bookings
     FOR EACH ROW
@@ -240,11 +203,6 @@ BEGIN
 END;
 /
 
--- ======================================================
--- VALIDATION TRIGGERS
--- ======================================================
-
--- Validate email format in customers table
 CREATE OR REPLACE TRIGGER trg_validate_customer_email
     BEFORE INSERT OR UPDATE OF email ON customers
     FOR EACH ROW
@@ -256,7 +214,6 @@ BEGIN
 END;
 /
 
--- Validate room number format
 CREATE OR REPLACE TRIGGER trg_validate_room_number
     BEFORE INSERT OR UPDATE OF room_number ON rooms
     FOR EACH ROW
@@ -290,7 +247,6 @@ BEGIN
 END;
 /
 
--- Update customer total spent when booking is checked out
 CREATE OR REPLACE TRIGGER trg_update_revenue_on_checkout
     AFTER UPDATE OF booking_status ON bookings
     FOR EACH ROW
@@ -298,10 +254,10 @@ CREATE OR REPLACE TRIGGER trg_update_revenue_on_checkout
 DECLARE
     v_total_revenue NUMBER;
 BEGIN
-    -- Calculate total revenue for this booking (room + services + extra charges)
+
     v_total_revenue := :NEW.total_amount + NVL(:NEW.services_total, 0) + NVL(:NEW.extra_charges, 0);
 
-    -- Update customer's total spent
+
     UPDATE customers
     SET total_spent = total_spent + v_total_revenue
     WHERE customer_id = :NEW.customer_id;
