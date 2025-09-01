@@ -264,30 +264,25 @@ END check_out_customer;
 
 -- Update customer VIP status based on spending
 CREATE OR REPLACE PROCEDURE update_vip_status(
-    p_customer_id IN NUMBER
+    p_customer_id IN NUMBER,
+    p_total_spent IN NUMBER
 ) AS
-    v_total_spent NUMBER;
     v_existing_vip NUMBER;
     v_new_level VARCHAR2(20);
     v_new_discount NUMBER;
 BEGIN
-    -- Get customer's total spending
-    SELECT total_spent INTO v_total_spent
-    FROM customers
-    WHERE customer_id = p_customer_id;
-
-    -- Determine VIP level based on spending
-    IF v_total_spent >= 20000 THEN
+    -- Determine VIP level based on provided spending (avoid mutating table SELECT)
+    IF p_total_spent >= 20000 THEN
         v_new_level := 'DIAMOND';
         v_new_discount := 20;
-    ELSIF v_total_spent >= 10000 THEN
+    ELSIF p_total_spent >= 10000 THEN
         v_new_level := 'PLATINUM';
         v_new_discount := 15;
-    ELSIF v_total_spent >= 5000 THEN
+    ELSIF p_total_spent >= 5000 THEN
         v_new_level := 'GOLD';
         v_new_discount := 10;
     ELSE
-        -- Not eligible for VIP
+        -- Not eligible for VIP -> remove if exists (safe DML on different table)
         DELETE FROM vip_members WHERE customer_id = p_customer_id;
         RETURN;
     END IF;
@@ -298,7 +293,6 @@ BEGIN
     WHERE customer_id = p_customer_id;
 
     IF v_existing_vip = 0 THEN
-        -- Create new VIP membership
         INSERT INTO vip_members (
             vip_id, customer_id, membership_level, discount_percentage,
             benefits, is_active
@@ -307,17 +301,15 @@ BEGIN
             'Priority Booking, Late Checkout, Room Upgrades', 'Y'
         );
     ELSE
-        -- Update existing VIP membership
         UPDATE vip_members
         SET membership_level = v_new_level,
             discount_percentage = v_new_discount
         WHERE customer_id = p_customer_id;
     END IF;
-
-    COMMIT;
+    -- No COMMIT here (controlled by outer transaction). No ROLLBACK.
 EXCEPTION
     WHEN OTHERS THEN
-        ROLLBACK;
+        -- Re-raise without transaction control (trigger-safe)
         RAISE;
 END update_vip_status;
 /
