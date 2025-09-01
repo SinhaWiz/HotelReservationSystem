@@ -149,7 +149,7 @@ public class HotelManagementApp extends JFrame {
         roomPanel = new RoomManagementPanel(hotelService);
         vipPanel = new VIPMemberPanel(hotelService);
         servicePanel = new ServiceManagementPanel();
-        invoicePanel = new InvoiceManagementPanel();
+        invoicePanel = new InvoiceManagementPanel(hotelService); // pass shared service
         reportsPanel = new ReportsPanel(hotelService);
         
         // Add tabs

@@ -67,6 +67,11 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         generateReportButton = new JButton("Generate Report");
         exportReportButton = new JButton("Export to CSV");
         
+        // Apply bold black style to buttons
+        Font boldFont = getFont().deriveFont(Font.BOLD);
+        JButton[] btns = {generateReportButton, exportReportButton};
+        for (JButton b : btns) { if (b!=null){ b.setFont(boldFont); b.setForeground(Color.BLACK);} }
+
         // Set default date range (current month)
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.DAY_OF_MONTH, 1);
@@ -95,10 +100,11 @@ public class ReportsPanel extends JPanel implements RefreshablePanel {
         
         // Style buttons
         generateReportButton.setBackground(new Color(70, 130, 180));
-        generateReportButton.setForeground(Color.WHITE);
         exportReportButton.setBackground(new Color(34, 139, 34));
-        exportReportButton.setForeground(Color.WHITE);
-        
+        // Override foreground to black per requirement (after background set)
+        generateReportButton.setForeground(Color.BLACK);
+        exportReportButton.setForeground(Color.BLACK);
+
         // Quick stats labels
         totalRevenueLabel = new JLabel("$0.00");
         totalBookingsLabel = new JLabel("0");

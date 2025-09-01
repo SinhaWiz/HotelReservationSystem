@@ -101,12 +101,20 @@ public class RoomManagementPanel extends JPanel implements RefreshablePanel {
         roomUtilizationButton = new JButton("Room Utilization");
         refreshButton = new JButton("Refresh");
         
-        // Style buttons
+        // Style buttons (retain existing backgrounds where set later if any)
         updateStatusButton.setBackground(new Color(70, 130, 180));
-        updateStatusButton.setForeground(Color.WHITE);
         viewAvailabilityButton.setBackground(new Color(34, 139, 34));
-        viewAvailabilityButton.setForeground(Color.WHITE);
-        
+
+        // Apply bold black font + foreground to all panel buttons
+        Font boldFont = getFont().deriveFont(Font.BOLD);
+        JButton[] buttons = {filterButton, clearFilterButton, updateStatusButton, viewAvailabilityButton, roomUtilizationButton, refreshButton};
+        for (JButton b : buttons) {
+            if (b != null) {
+                b.setFont(boldFont);
+                b.setForeground(Color.BLACK);
+            }
+        }
+
         // Statistics labels
         totalRoomsLabel = new JLabel("0");
         availableRoomsLabel = new JLabel("0");

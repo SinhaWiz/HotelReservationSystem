@@ -130,18 +130,27 @@ public class BookingManagementPanel extends JPanel implements RefreshablePanel {
 
         addServiceUsageButton = new JButton("Add Service Usage");
 
-        // Style buttons
+        // Style buttons (backgrounds retained)
         newBookingButton.setBackground(new Color(34, 139, 34));
-        newBookingButton.setForeground(Color.WHITE);
         checkInButton.setBackground(new Color(70, 130, 180));
-        checkInButton.setForeground(Color.WHITE);
         checkOutButton.setBackground(new Color(255, 140, 0));
-        checkOutButton.setForeground(Color.WHITE);
         cancelBookingButton.setBackground(new Color(220, 20, 60));
-        cancelBookingButton.setForeground(Color.WHITE);
         addServiceUsageButton.setBackground(new Color(123, 104, 238));
-        addServiceUsageButton.setForeground(Color.WHITE);
 
+        // Apply bold black font + black foreground to all buttons
+        Font boldFont = getFont().deriveFont(Font.BOLD);
+        JButton[] allButtons = {
+                searchButton, clearFilterButton, dateFilterButton,
+                newBookingButton, checkInButton, checkOutButton,
+                cancelBookingButton, viewDetailsButton, refreshButton,
+                addServiceUsageButton
+        };
+        for (JButton b : allButtons) {
+            if (b != null) {
+                b.setFont(boldFont);
+                b.setForeground(Color.BLACK);
+            }
+        }
     }
 
     private void layoutComponents() {
@@ -799,4 +808,3 @@ class AddServiceUsageDialog extends JDialog {
         }
     }
 }
-

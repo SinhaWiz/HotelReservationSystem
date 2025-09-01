@@ -104,6 +104,7 @@ public class CustomerManagementPanel extends JPanel implements RefreshablePanel 
         refreshButton = new JButton("Refresh");
 
         // Set bold font for buttons
+         boldFont = customersTable.getFont().deriveFont(Font.BOLD);
         addCustomerButton.setFont(boldFont);
         editCustomerButton.setFont(boldFont);
         viewDetailsButton.setFont(boldFont);
@@ -112,11 +113,15 @@ public class CustomerManagementPanel extends JPanel implements RefreshablePanel 
         searchButton.setFont(boldFont);
         clearSearchButton.setFont(boldFont);
 
-        // Style buttons with black and white colors
+        // Set black foreground for all buttons per requirement
+        JButton[] buttons = {addCustomerButton, editCustomerButton, viewDetailsButton, promoteToVIPButton, refreshButton, searchButton, clearSearchButton};
+        for (JButton b : buttons) {
+            if (b != null) b.setForeground(Color.BLACK);
+        }
+
+        // Style buttons backgrounds (retain any existing specific styling)
         addCustomerButton.setBackground(Color.WHITE);
-        addCustomerButton.setForeground(Color.BLACK);
         promoteToVIPButton.setBackground(Color.WHITE);
-        promoteToVIPButton.setForeground(Color.BLACK);
     }
 
     private void layoutComponents() {

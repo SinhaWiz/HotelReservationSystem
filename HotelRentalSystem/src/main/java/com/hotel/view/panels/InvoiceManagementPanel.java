@@ -16,8 +16,8 @@ import java.util.List;
 /**
  * Panel for managing invoices and billing
  */
-public class InvoiceManagementPanel extends JPanel {
-    
+public class InvoiceManagementPanel extends JPanel implements RefreshablePanel {
+
     private EnhancedHotelManagementService hotelService;
     private JTable invoicesTable;
     private JTable lineItemsTable;
@@ -37,6 +37,18 @@ public class InvoiceManagementPanel extends JPanel {
         layoutComponents();
         attachEventListeners();
         loadInvoicesData();
+        loadBookingsForInvoicing(); // ensure bookings list populated initially
+        updateFinancialSummary();
+    }
+
+    // New constructor to reuse shared service instance
+    public InvoiceManagementPanel(EnhancedHotelManagementService hotelService) {
+        this.hotelService = hotelService != null ? hotelService : new EnhancedHotelManagementService();
+        initializeComponents();
+        layoutComponents();
+        attachEventListeners();
+        loadInvoicesData();
+        loadBookingsForInvoicing();
         updateFinancialSummary();
     }
     
@@ -95,6 +107,14 @@ public class InvoiceManagementPanel extends JPanel {
         financialSummaryLabel = new JLabel();
     }
     
+    // Helper to style buttons as black bold
+    private void styleButton(JButton b){
+        if(b!=null){
+            b.setFont(getFont().deriveFont(Font.BOLD));
+            b.setForeground(Color.BLACK);
+        }
+    }
+
     private void layoutComponents() {
         setLayout(new BorderLayout());
         
@@ -133,6 +153,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         JButton refreshBookingsButton = new JButton("Refresh");
         refreshBookingsButton.addActionListener(e -> loadBookingsForInvoicing());
+        styleButton(refreshBookingsButton);
         gbc.gridx = 3; gbc.gridwidth = 1; gbc.fill = GridBagConstraints.NONE;
         formPanel.add(refreshBookingsButton, gbc);
         
@@ -155,10 +176,12 @@ public class InvoiceManagementPanel extends JPanel {
         
         JButton generateButton = new JButton("Generate Invoice");
         generateButton.addActionListener(e -> generateInvoice());
+        styleButton(generateButton);
         buttonPanel.add(generateButton);
         
         JButton previewButton = new JButton("Preview Invoice");
         previewButton.addActionListener(e -> previewInvoice());
+        styleButton(previewButton);
         buttonPanel.add(previewButton);
         
         formPanel.add(buttonPanel, gbc);
@@ -192,6 +215,7 @@ public class InvoiceManagementPanel extends JPanel {
         
         JButton searchButton = new JButton("Search");
         searchButton.addActionListener(e -> searchInvoices());
+        styleButton(searchButton);
         searchPanel.add(searchButton);
         
         JButton refreshButton = new JButton("Refresh");
@@ -199,18 +223,22 @@ public class InvoiceManagementPanel extends JPanel {
             loadInvoicesData();
             updateFinancialSummary();
         });
+        styleButton(refreshButton);
         searchPanel.add(refreshButton);
         
         JButton pendingButton = new JButton("Show Pending");
         pendingButton.addActionListener(e -> loadPendingInvoices());
+        styleButton(pendingButton);
         searchPanel.add(pendingButton);
         
         JButton overdueButton = new JButton("Show Overdue");
         overdueButton.addActionListener(e -> loadOverdueInvoices());
+        styleButton(overdueButton);
         searchPanel.add(overdueButton);
         
         JButton allButton = new JButton("Show All");
         allButton.addActionListener(e -> loadInvoicesData());
+        styleButton(allButton);
         searchPanel.add(allButton);
         
         topPanel.add(searchPanel, BorderLayout.NORTH);
@@ -255,14 +283,17 @@ public class InvoiceManagementPanel extends JPanel {
         
         JButton updatePaymentButton = new JButton("Update Payment Status");
         updatePaymentButton.addActionListener(e -> updatePaymentStatus());
+        styleButton(updatePaymentButton);
         panel.add(updatePaymentButton);
         
         JButton printInvoiceButton = new JButton("Print Invoice");
         printInvoiceButton.addActionListener(e -> printInvoice());
+        styleButton(printInvoiceButton);
         panel.add(printInvoiceButton);
         
         JButton emailInvoiceButton = new JButton("Email Invoice");
         emailInvoiceButton.addActionListener(e -> emailInvoice());
+        styleButton(emailInvoiceButton);
         panel.add(emailInvoiceButton);
         
         return panel;
@@ -287,6 +318,7 @@ public class InvoiceManagementPanel extends JPanel {
                 showError("Error generating revenue report: " + ex.getMessage());
             }
         });
+        styleButton(revenueReportButton);
         buttonPanel.add(revenueReportButton);
         
         JButton paymentReportButton = new JButton("Payment Status Report");
@@ -298,10 +330,12 @@ public class InvoiceManagementPanel extends JPanel {
                 showError("Error generating payment report: " + ex.getMessage());
             }
         });
+        styleButton(paymentReportButton);
         buttonPanel.add(paymentReportButton);
         
         JButton customerBillingButton = new JButton("Customer Billing Summary");
         customerBillingButton.addActionListener(e -> showCustomerBillingSummary());
+        styleButton(customerBillingButton);
         buttonPanel.add(customerBillingButton);
         
         panel.add(buttonPanel, BorderLayout.NORTH);
@@ -361,24 +395,24 @@ public class InvoiceManagementPanel extends JPanel {
         try {
             bookingComboBox.removeAllItems();
             List<Booking> bookings = hotelService.getAllBookings();
-            
             for (Booking booking : bookings) {
-                // Only show checked-out bookings that don't have invoices yet
-                if ("CHECKED_OUT".equals(booking.getBookingStatus())) {
+                String status = booking.getBookingStatus();
+                if (status != null) status = status.trim().toUpperCase();
+                // Only show checked-out bookings without invoices
+                if ("CHECKED_OUT".equals(status)) {
                     List<Invoice> existingInvoices = hotelService.getBookingInvoices((int) booking.getBookingId());
-                    if (existingInvoices.isEmpty()) {
+                    if (existingInvoices == null || existingInvoices.isEmpty()) {
                         Customer customer = hotelService.getCustomer(booking.getCustomerId());
-                        String displayText = String.format("Booking %d - %s (Room %d) - $%.2f", 
-                                                          booking.getBookingId(),
-                                                          customer != null ? customer.getFullName() : "Unknown",
-                                                          booking.getRoomId(),
-                                                          booking.getTotalAmount());
+                        String displayText = String.format("Booking %d - %s (Room %d) - $%.2f",
+                                booking.getBookingId(),
+                                customer != null ? customer.getFullName() : "Unknown",
+                                booking.getRoomId(),
+                                booking.getTotalAmount());
                         bookingComboBox.addItem(displayText);
                     }
                 }
             }
-            
-        } catch (SQLException e) {
+        } catch (Exception e) {
             showError("Error loading bookings: " + e.getMessage());
         }
     }
@@ -853,6 +887,7 @@ public class InvoiceManagementPanel extends JPanel {
         // Implementation would involve sending invoice via email
     }
     
+    @Override
     public void refreshData() {
         loadInvoicesData();
         loadBookingsForInvoicing();

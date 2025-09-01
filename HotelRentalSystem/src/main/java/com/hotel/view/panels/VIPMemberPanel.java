@@ -104,12 +104,19 @@ public class VIPMemberPanel extends JPanel {
         processRenewalsButton = new JButton("Process Renewals");
         refreshButton = new JButton("Refresh");
         
-        // Style buttons
+        // Style buttons (retain backgrounds but unify font/foreground per requirement)
         processRenewalsButton.setBackground(new Color(70, 130, 180));
-        processRenewalsButton.setForeground(Color.WHITE);
         deactivateButton.setBackground(new Color(220, 20, 60));
-        deactivateButton.setForeground(Color.WHITE);
-        
+
+        Font boldFont = getFont().deriveFont(Font.BOLD);
+        JButton[] buttons = {filterButton, clearFilterButton, viewDetailsButton, updateMemberButton, deactivateButton, processRenewalsButton, refreshButton};
+        for (JButton b : buttons) {
+            if (b != null) {
+                b.setFont(boldFont);
+                b.setForeground(Color.BLACK);
+            }
+        }
+
         // Statistics labels
         totalVIPLabel = new JLabel("0");
         goldMembersLabel = new JLabel("0");
